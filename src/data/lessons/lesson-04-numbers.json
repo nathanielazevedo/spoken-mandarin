@@ -1,0 +1,84 @@
+{
+  "id": "lesson-04",
+  "title": "Numbers & Counting",
+  "vocabulary": [
+    { "id": "v1", "pinyin": "líng", "english": "zero" },
+    { "id": "v2", "pinyin": "yī", "english": "one" },
+    { "id": "v3", "pinyin": "èr", "english": "two" },
+    { "id": "v4", "pinyin": "liǎng", "english": "two (measure)" },
+    { "id": "v5", "pinyin": "sān", "english": "three" },
+    { "id": "v6", "pinyin": "sì", "english": "four" },
+    { "id": "v7", "pinyin": "wǔ", "english": "five" },
+    { "id": "v8", "pinyin": "liù", "english": "six" },
+    { "id": "v9", "pinyin": "qī", "english": "seven" },
+    { "id": "v10", "pinyin": "bā", "english": "eight" },
+    { "id": "v11", "pinyin": "jiǔ", "english": "nine" },
+    { "id": "v12", "pinyin": "shí", "english": "ten" },
+    { "id": "v13", "pinyin": "bǎi", "english": "hundred" },
+    { "id": "v14", "pinyin": "qiān", "english": "thousand" },
+    { "id": "v15", "pinyin": "jǐ", "english": "how many" },
+    { "id": "v16", "pinyin": "shù", "english": "to count" },
+    { "id": "v17", "pinyin": "cóng", "english": "from" },
+    { "id": "v18", "pinyin": "dào", "english": "to/until" },
+    { "id": "v19", "pinyin": "bēi", "english": "cup (measure word)" },
+    { "id": "v20", "pinyin": "chá", "english": "tea" },
+    { "id": "v21", "pinyin": "kuài", "english": "yuan" },
+    { "id": "v22", "pinyin": "diàn huà", "english": "phone" },
+    { "id": "v23", "pinyin": "hào mǎ", "english": "number" },
+    { "id": "v24", "pinyin": "mǎi", "english": "to buy" },
+    { "id": "v25", "pinyin": "méi", "english": "every" }
+  ],
+  "conversation": {
+    "title": "Counting & Sharing Numbers",
+    "turns": [
+      {
+        "id": "t1",
+        "bot": {
+          "pinyin": "nǐ kě yǐ cóng líng dào shí shù yī biàn ma?",
+          "english": "Can you count from zero to ten?"
+        },
+        "user": {
+          "pinyin": "líng, yī, èr, sān, sì, wǔ, liù, qī, bā, jiǔ, shí.",
+          "english": "Zero through ten in order.",
+          "hint": "Say the whole list smoothly; add shí yī, shí èr if you want to go higher."
+        },
+        "validation": {
+          "startsWith": "líng, yī",
+          "mustInclude": ["jiǔ", "shí"]
+        }
+      },
+      {
+        "id": "t2",
+        "bot": {
+          "pinyin": "nǐ xiǎng mǎi jǐ bēi chá?",
+          "english": "How many cups of tea do you want to buy?"
+        },
+        "user": {
+          "pinyin": "wǒ xiǎng mǎi liǎng bēi chá, měi bēi èr shí kuài.",
+          "english": "I want to buy two cups of tea, each cup costs twenty yuan.",
+          "hint": "Change liǎng bēi or the price words if you need different numbers."
+        },
+        "validation": {
+          "startsWith": "wǒ xiǎng mǎi",
+          "mustInclude": ["bēi", "kuài"]
+        }
+      },
+      {
+        "id": "t3",
+        "bot": {
+          "pinyin": "nǐ de diàn huà hào mǎ shì duō shao?",
+          "english": "What is your phone number?"
+        },
+        "user": {
+          "pinyin": "wǒ de diàn huà shì líng liù bā bā, qī wǔ yī, sān sān jiǔ jiǔ.",
+          "english": "My phone is 0688-751-3399.",
+          "hint": "Say each digit slowly; replace with your own pretend number."
+        },
+        "validation": {
+          "startsWith": "wǒ de diàn huà",
+          "mustInclude": ["líng", "bā"]
+        }
+      }
+    ]
+  }
+}

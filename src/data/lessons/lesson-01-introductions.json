@@ -1,0 +1,360 @@
+{
+  "id": "lesson-01",
+  "title": "Introductions",
+  "vocabulary": [
+    { "id": "v1", "pinyin": "nǐ hǎo", "english": "hello" },
+    { "id": "v2", "pinyin": "nín hǎo", "english": "hello (polite)" },
+    { "id": "v3", "pinyin": "wǒ", "english": "I, me" },
+    { "id": "v4", "pinyin": "nǐ", "english": "you" },
+    { "id": "v5", "pinyin": "tā", "english": "he or she" },
+    { "id": "v6", "pinyin": "wǒ men", "english": "we, us" },
+    { "id": "v7", "pinyin": "jiào", "english": "to be called" },
+    { "id": "v8", "pinyin": "xìng", "english": "surname" },
+    { "id": "v9", "pinyin": "míng zi", "english": "name" },
+    { "id": "v10", "pinyin": "shì", "english": "to be" },
+    { "id": "v11", "pinyin": "shén me", "english": "what" },
+    { "id": "v12", "pinyin": "nǎ lǐ", "english": "where, which place" },
+    { "id": "v13", "pinyin": "lái", "english": "to come" },
+    { "id": "v14", "pinyin": "cóng", "english": "from" },
+    { "id": "v15", "pinyin": "zhù", "english": "to live" },
+    { "id": "v16", "pinyin": "zài", "english": "to be at, in" },
+    { "id": "v17", "pinyin": "yǒu", "english": "to have" },
+    { "id": "v18", "pinyin": "chéng shì", "english": "city" },
+    { "id": "v19", "pinyin": "guó jiā", "english": "country" },
+    { "id": "v20", "pinyin": "gōng zuò", "english": "work, job" },
+    { "id": "v21", "pinyin": "zhí yè", "english": "profession" },
+    { "id": "v22", "pinyin": "gōng sī", "english": "company" },
+    { "id": "v23", "pinyin": "xué xiào", "english": "school" },
+    { "id": "v24", "pinyin": "xué shēng", "english": "student" },
+    { "id": "v25", "pinyin": "lǎo shī", "english": "teacher" },
+    { "id": "v26", "pinyin": "tóng shì", "english": "coworker" },
+    { "id": "v27", "pinyin": "péng yǒu", "english": "friend" },
+    { "id": "v28", "pinyin": "rèn shi", "english": "to know, meet" },
+    { "id": "v29", "pinyin": "jiè shào", "english": "to introduce" },
+    { "id": "v30", "pinyin": "yǔ yán", "english": "language" },
+    { "id": "v31", "pinyin": "Zhōng wén", "english": "Chinese language" },
+    { "id": "v32", "pinyin": "Yīng yǔ", "english": "English language" },
+    { "id": "v33", "pinyin": "huì", "english": "can, know how" },
+    { "id": "v34", "pinyin": "shuō", "english": "to speak" },
+    { "id": "v35", "pinyin": "tīng", "english": "to listen" },
+    { "id": "v36", "pinyin": "dǒng", "english": "to understand" },
+    { "id": "v37", "pinyin": "xǐ huān", "english": "to like" },
+    { "id": "v38", "pinyin": "ài hào", "english": "hobby" },
+    { "id": "v39", "pinyin": "hé", "english": "and" },
+    { "id": "v40", "pinyin": "hěn", "english": "very" },
+    { "id": "v41", "pinyin": "bù", "english": "not" },
+    { "id": "v42", "pinyin": "yě", "english": "also" },
+    { "id": "v43", "pinyin": "dàn shì", "english": "but" },
+    { "id": "v44", "pinyin": "yīn wèi", "english": "because" },
+    { "id": "v45", "pinyin": "qǐng", "english": "please" },
+    { "id": "v46", "pinyin": "kě yǐ", "english": "may, can" },
+    { "id": "v47", "pinyin": "ma", "english": "question particle" },
+    { "id": "v48", "pinyin": "diàn huà", "english": "telephone" },
+    { "id": "v49", "pinyin": "hào mǎ", "english": "number" },
+    { "id": "v50", "pinyin": "wēi xìn", "english": "WeChat" }
+  ],
+  "conversation": {
+    "title": "Networking at Orientation",
+    "turns": [
+      {
+        "id": "t1",
+        "bot": {
+          "pinyin": "nín hǎo, huān yíng dào xīn xué yuàn.",
+          "english": "Hello, welcome to the new academy."
+        },
+        "user": {
+          "pinyin": "nǐ hǎo, hěn gāo xìng dào zhè lǐ.",
+          "english": "Hi, I'm happy to be here."
+        }
+      },
+      {
+        "id": "t2",
+        "bot": {
+          "pinyin": "qǐng wèn nín xìng shén me?",
+          "english": "May I ask what your surname is?"
+        },
+        "user": {
+          "pinyin": "wǒ xìng <nǐ de xìng>.",
+          "english": "My surname is <your surname>.",
+          "hint": "Swap in your actual family name."
+        },
+        "validation": {
+          "startsWith": "wǒ xìng"
+        }
+      },
+      {
+        "id": "t3",
+        "bot": {
+          "pinyin": "nǐ de míng zi shì shén me?",
+          "english": "What is your given name?"
+        },
+        "user": {
+          "pinyin": "wǒ jiào <nǐ de míng zi>.",
+          "english": "I am called <your name>.",
+          "hint": "Use the full name you go by."
+        },
+        "validation": {
+          "startsWith": "wǒ jiào"
+        }
+      },
+      {
+        "id": "t4",
+        "bot": {
+          "pinyin": "nǐ cóng nǎ lǐ lái?",
+          "english": "Where do you come from?"
+        },
+        "user": {
+          "pinyin": "wǒ cóng <nǐ de chéng shì> lái.",
+          "english": "I come from <your city>.",
+          "hint": "Name your hometown."
+        },
+        "validation": {
+          "mustInclude": ["lái"]
+        }
+      },
+      {
+        "id": "t5",
+        "bot": {
+          "pinyin": "nǐ xiàn zài zhù zài nǎ gè chéng shì?",
+          "english": "Which city do you live in now?"
+        },
+        "user": {
+          "pinyin": "wǒ zhù zài <nǐ de zhù zhǐ> chéng shì.",
+          "english": "I live in the city of <where you live>."
+        },
+        "validation": {
+          "mustInclude": ["zhù zài"]
+        }
+      },
+      {
+        "id": "t6",
+        "bot": {
+          "pinyin": "nǐ de zhí yè shì shén me?",
+          "english": "What is your profession?"
+        },
+        "user": {
+          "pinyin": "wǒ shì <nǐ de zhí yè>.",
+          "english": "I am a <your job>."
+        },
+        "validation": {
+          "startsWith": "wǒ shì"
+        }
+      },
+      {
+        "id": "t7",
+        "bot": {
+          "pinyin": "nǐ zài nǎ jiā gōng sī gōng zuò?",
+          "english": "Which company do you work for?"
+        },
+        "user": {
+          "pinyin": "wǒ zài <gōng sī míng chēng> gōng zuò.",
+          "english": "I work at <your company>."
+        },
+        "validation": {
+          "startsWith": "wǒ zài"
+        }
+      },
+      {
+        "id": "t8",
+        "bot": {
+          "pinyin": "nǐ huì shuō nǎ xiē yǔ yán?",
+          "english": "Which languages can you speak?"
+        },
+        "user": {
+          "pinyin": "wǒ huì shuō Yīng yǔ hé Zhōng wén.",
+          "english": "I can speak English and Chinese."
+        },
+        "validation": {
+          "startsWith": "wǒ huì"
+        }
+      },
+      {
+        "id": "t9",
+        "bot": {
+          "pinyin": "nǐ duì Zhōng wén tīng lǐ jiě zěn me yàng?",
+          "english": "How is your Chinese listening comprehension?"
+        },
+        "user": {
+          "pinyin": "wǒ tīng dé dǒng, dàn shì xū yào duō liàn xí.",
+          "english": "I can understand, but I need more practice."
+        }
+      },
+      {
+        "id": "t10",
+        "bot": {
+          "pinyin": "nǐ xǐ huān shén me ài hào?",
+          "english": "What hobbies do you enjoy?"
+        },
+        "user": {
+          "pinyin": "wǒ xǐ huān xué xīn yǔ yán hé pǎo bù.",
+          "english": "I like learning new languages and jogging."
+        }
+      },
+      {
+        "id": "t11",
+        "bot": {
+          "pinyin": "nǐ wèishéme lái cānjiā zhè cì péixùn?",
+          "english": "Why did you come to this training?"
+        },
+        "user": {
+          "pinyin": "yīn wèi wǒ xiǎng rèn shi xīn tóng shì hé tí gāo Zhōng wén.",
+          "english": "Because I want to meet new colleagues and improve my Chinese."
+        }
+      },
+      {
+        "id": "t12",
+        "bot": {
+          "pinyin": "nǐ duì jīn rì de chéng xù yǒu shé me qī dài?",
+          "english": "What expectations do you have for today's schedule?"
+        },
+        "user": {
+          "pinyin": "wǒ qī dài xué dào gōng zuò liú chéng hé wèn tí jiě jué fāng fǎ.",
+          "english": "I expect to learn the workflow and problem-solving methods."
+        }
+      },
+      {
+        "id": "t13",
+        "bot": {
+          "pinyin": "nǐ yǐ jīng jiàn guò nǐ de tuán duì ma?",
+          "english": "Have you already met your team?"
+        },
+        "user": {
+          "pinyin": "wǒ jiàn guò liǎng gè tóng shì, tā men hěn qǐn fèn.",
+          "english": "I have met two coworkers, and they are very diligent."
+        }
+      },
+      {
+        "id": "t14",
+        "bot": {
+          "pinyin": "nǐ xū yào wǒ jiè shào bié de rén ma?",
+          "english": "Do you need me to introduce you to others?"
+        },
+        "user": {
+          "pinyin": "qǐng jiè shào shè jì bù de tóng shì gěi wǒ.",
+          "english": "Please introduce me to the colleagues in the design department."
+        }
+      },
+      {
+        "id": "t15",
+        "bot": {
+          "pinyin": "nǐ duì jīn tiān de kē chéng ān pái qīng chǔ ma?",
+          "english": "Are you clear about today's course schedule?"
+        },
+        "user": {
+          "pinyin": "wǒ kàn guò biǎo gé, jīn wǎn yǒu duì huà huì yì.",
+          "english": "I reviewed the table, and there is a dialogue session tonight."
+        }
+      },
+      {
+        "id": "t16",
+        "bot": {
+          "pinyin": "nǐ xiǎng yī qǐ chī wǔ fàn ma?",
+          "english": "Would you like to eat lunch together?"
+        },
+        "user": {
+          "pinyin": "hǎo de, wǒ xǐ huān yī biān chī fàn yī biān liáo tiān.",
+          "english": "Sure, I enjoy chatting while eating."
+        }
+      },
+      {
+        "id": "t17",
+        "bot": {
+          "pinyin": "nǐ jué dé jīn tiān de zhǔ jiǎng lǎo shī zěn me yàng?",
+          "english": "How do you feel about today's lead instructor?"
+        },
+        "user": {
+          "pinyin": "wǒ jué dé tā de shuō míng hěn qīng chǔ.",
+          "english": "I think their explanations are very clear."
+        }
+      },
+      {
+        "id": "t18",
+        "bot": {
+          "pinyin": "wǒ kě yǐ jié shù hòu fā zī liào gěi nǐ ma?",
+          "english": "Can I send you the materials afterward?"
+        },
+        "user": {
+          "pinyin": "qǐng fā gěi wǒ, wǒ huì zài wǎn shàng fù xí.",
+          "english": "Please send them to me, and I will review them tonight."
+        }
+      },
+      {
+        "id": "t19",
+        "bot": {
+          "pinyin": "nǐ xū yào duō shǎo shí jiān zhǔn bèi nǐ de xiàng mù?",
+          "english": "How much time do you need to prepare your project?"
+        },
+        "user": {
+          "pinyin": "wǒ xū yào sān tiān shí jiān lái jì huà.",
+          "english": "I need three days to plan it."
+        }
+      },
+      {
+        "id": "t20",
+        "bot": {
+          "pinyin": "nǐ měi yuè yào chū chāi ma?",
+          "english": "Do you travel for work every month?"
+        },
+        "user": {
+          "pinyin": "wǒ měi yuè chū chāi yí cì, dàn shì kě yǐ tiáo zhěng ān pái.",
+          "english": "I travel once a month, but I can adjust the schedule."
+        }
+      },
+      {
+        "id": "t21",
+        "bot": {
+          "pinyin": "nǐ xī wàng wǒ men tí gōng shén me zhī chí?",
+          "english": "What support do you hope we provide?"
+        },
+        "user": {
+          "pinyin": "qǐng bāng wǒ lián xì zhōng wén péixùn lǎo shī.",
+          "english": "Please help me connect with the Chinese training teacher."
+        }
+      },
+      {
+        "id": "t22",
+        "bot": {
+          "pinyin": "nǐ jiā rén zhī chí nǐ de jué dìng ma?",
+          "english": "Do your family members support your decision?"
+        },
+        "user": {
+          "pinyin": "tā men hěn zhī chí bìng qiě gǔ lì wǒ jiān chí.",
+          "english": "They strongly support me and encourage me to persist."
+        }
+      },
+      {
+        "id": "t23",
+        "bot": {
+          "pinyin": "nǐ zhōu mò dǎ suàn zěn me fàng sōng?",
+          "english": "How do you plan to relax this weekend?"
+        },
+        "user": {
+          "pinyin": "wǒ dǎ suàn kàn shū hé liàn xí kǒu yǔ.",
+          "english": "I plan to read books and practice speaking."
+        }
+      },
+      {
+        "id": "t24",
+        "bot": {
+          "pinyin": "nǐ huì yuàn yì bāng zhù xīn péng yǒu liàn xí duì huà ma?",
+          "english": "Would you be willing to help new friends practice dialogues?"
+        },
+        "user": {
+          "pinyin": "wǒ yuàn yì, yīn wèi yǔ huì shì zuì hǎo de fāng shì.",
+          "english": "I'm willing, because conversation is the best method."
+        }
+      },
+      {
+        "id": "t25",
+        "bot": {
+          "pinyin": "hěn gǎn xiè nǐ de fēn xiǎng, wǒ men huì zài xià yí jié kè shàng jiàn.",
+          "english": "Thank you for sharing; we'll meet in the next class."
+        },
+        "user": {
+          "pinyin": "xiè xiè nǐ de bāng zhù, dào shí jiàn.",
+          "english": "Thank you for your help, see you then."
+        }
+      }
+    ]
+  }
+}

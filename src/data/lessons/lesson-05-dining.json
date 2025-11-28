@@ -1,0 +1,82 @@
+{
+  "id": "lesson-05",
+  "title": "Dining & Ordering Food",
+  "vocabulary": [
+    { "id": "v1", "pinyin": "fàn diàn", "english": "restaurant" },
+    { "id": "v2", "pinyin": "wèi zi", "english": "seat" },
+    { "id": "v3", "pinyin": "cān", "english": "meal" },
+    { "id": "v4", "pinyin": "diǎn cài", "english": "to order food" },
+    { "id": "v5", "pinyin": "cài dān", "english": "menu" },
+    { "id": "v6", "pinyin": "shén me", "english": "what" },
+    { "id": "v7", "pinyin": "tuī jiàn", "english": "to recommend" },
+    { "id": "v8", "pinyin": "rè", "english": "hot" },
+    { "id": "v9", "pinyin": "lěng", "english": "cold" },
+    { "id": "v10", "pinyin": "yī wǎn", "english": "one bowl" },
+    { "id": "v11", "pinyin": "yī píng", "english": "one bottle" },
+    { "id": "v12", "pinyin": "miàn", "english": "noodles" },
+    { "id": "v13", "pinyin": "tāng", "english": "soup" },
+    { "id": "v14", "pinyin": "shuǐ", "english": "water" },
+    { "id": "v15", "pinyin": "chá", "english": "tea" },
+    { "id": "v16", "pinyin": "mài dān", "english": "to pay the bill" },
+    { "id": "v17", "pinyin": "duō shao qián", "english": "how much money" },
+    { "id": "v18", "pinyin": "kě yǐ", "english": "can / may" },
+    { "id": "v19", "pinyin": "qǐng", "english": "please" },
+    { "id": "v20", "pinyin": "dài zou", "english": "to take out" },
+    { "id": "v21", "pinyin": "yì qǐ", "english": "together" },
+    { "id": "v22", "pinyin": "liǎng", "english": "two (measure)" },
+    { "id": "v23", "pinyin": "bēi", "english": "cup" },
+    { "id": "v24", "pinyin": "kuài", "english": "yuan" }
+  ],
+  "conversation": {
+    "title": "Ordering at a Restaurant",
+    "turns": [
+      {
+        "id": "t1",
+        "bot": {
+          "pinyin": "huān yíng! nǐ men yào jǐ gè wèi zi?",
+          "english": "Welcome! How many seats do you need?"
+        },
+        "user": {
+          "pinyin": "wǒ men liǎng gè rén, kě yǐ zuò nà ge wèi zi ma?",
+          "english": "We are two people, can we sit at that seat?",
+          "hint": "Change the number of people if needed."
+        },
+        "validation": {
+          "mustInclude": ["liǎng"],
+          "startsWith": "wǒ men"
+        }
+      },
+      {
+        "id": "t2",
+        "bot": {
+          "pinyin": "qǐng kàn cài dān, nǐ xiǎng diǎn shén me?",
+          "english": "Please look at the menu, what would you like to order?"
+        },
+        "user": {
+          "pinyin": "qǐng tuī jiàn yī wǎn rè miàn hé yī píng lěng chá.",
+          "english": "Please recommend one bowl of hot noodles and one bottle of cold tea.",
+          "hint": "Swap in your favorite dishes or drinks."
+        },
+        "validation": {
+          "mustInclude": ["yī wǎn", "yī píng"],
+          "startsWith": "qǐng"
+        }
+      },
+      {
+        "id": "t3",
+        "bot": {
+          "pinyin": "hǎo de, yào dài zou hái shì zài zhè lǐ chī?",
+          "english": "Great, is this for takeout or eating here?"
+        },
+        "user": {
+          "pinyin": "zài zhè lǐ chī, mài dān shí duō shao qián?",
+          "english": "We will eat here; when paying, how much is it?",
+          "hint": "Add the actual total if you know it."
+        },
+        "validation": {
+          "mustInclude": ["mài dān", "duō shao qián"]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "id": "lesson-02",
+  "title": "Travel & Transportation",
+  "vocabulary": [
+    {
+      "id": "v1",
+      "pinyin": "jī chǎng",
+      "english": "airport"
+    },
+    {
+      "id": "v2",
+      "pinyin": "huǒ chē zhàn",
+      "english": "train station"
+    },
+    {
+      "id": "v3",
+      "pinyin": "dì tiě",
+      "english": "subway"
+    },
+    {
+      "id": "v4",
+      "pinyin": "chū zū chē",
+      "english": "taxi"
+    },
+    {
+      "id": "v5",
+      "pinyin": "qù",
+      "english": "to go"
+    },
+    {
+      "id": "v6",
+      "pinyin": "nǎ lǐ",
+      "english": "where"
+    },
+    {
+      "id": "v7",
+      "pinyin": "zài",
+      "english": "to be at/in"
+    },
+    {
+      "id": "v8",
+      "pinyin": "yào",
+      "english": "to want"
+    },
+    {
+      "id": "v9",
+      "pinyin": "piào",
+      "english": "ticket"
+    },
+    {
+      "id": "v10",
+      "pinyin": "duō shao qián",
+      "english": "how much money"
+    },
+    {
+      "id": "v11",
+      "pinyin": "kuài",
+      "english": "fast / yuan (money)"
+    },
+    {
+      "id": "v12",
+      "pinyin": "hǎo",
+      "english": "good"
+    },
+    {
+      "id": "v13",
+      "pinyin": "ma",
+      "english": "question particle"
+    },
+    {
+      "id": "v14",
+      "pinyin": "wǔ kuài",
+      "english": "five yuan"
+    }
+  ],
+  "conversation": {
+    "title": "Getting to the Airport",
+    "turns": [
+      {
+        "id": "t1",
+        "bot": {
+          "pinyin": "nǐ yào qù nǎ lǐ?",
+          "english": "Where do you want to go?"
+        },
+        "user": {
+          "pinyin": "wǒ yào qù jī chǎng.",
+          "english": "I want to go to the airport."
+        }
+      },
+      {
+        "id": "t2",
+        "bot": {
+          "pinyin": "nǐ yào dì tiě ma?",
+          "english": "Do you want the subway?"
+        },
+        "user": {
+          "pinyin": "dì tiě piào duō shao qián?",
+          "english": "How much is the subway ticket?"
+        }
+      },
+      {
+        "id": "t3",
+        "bot": {
+          "pinyin": "piào shì wǔ kuài. qù jī chǎng hěn kuài.",
+          "english": "The ticket is five yuan. Going to the airport is very fast."
+        },
+        "user": {
+          "pinyin": "hǎo, wǒ yào piào.",
+          "english": "Great, I want a ticket."
+        }
+      }
+    ]
+  }
+}
