@@ -1,73 +1,62 @@
-# React + TypeScript + Vite
+# Language Practice App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite app for Mandarin study sessions. Lessons mix vocabulary flashcards, timed typing drills, and guided conversations with validation hints.
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js 20+
+- npm 10+
+- (Optional) OpenAI API key for pre-generating audio clips
 
-## React Compiler
+## Local Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Pre-generating Lesson Audio with OpenAI
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Use `scripts/generate-lesson-audio.mjs` to batch-create MP3 files for each vocabulary item via OpenAI TTS. Outputs land in `public/audio/<lessonId>` and can be referenced in lesson data.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. Configure secrets
+
+Create `.env.local` (ignored by git) with at least:
+
+```
+OPENAI_API_KEY=sk-YOUR_KEY
+# optional overrides
+OPENAI_TTS_MODEL=gpt-4o-mini-tts
+OPENAI_TTS_VOICE=alloy
+OPENAI_TTS_DELAY_MS=1200
+```
+
+### 2. Run the generator
+
+```bash
+npm run generate:audio -- \
+  --lesson src/data/lessons/lesson-01-introductions.json \
+  --outDir public/audio/lesson-01
+```
+
+Flags:
+
+- `--force` – regenerate even if files already exist
+- `--count` – only process the first N vocabulary rows (helpful for smoke tests)
+- `--voice` / `--model` – override defaults per run
+- `--delay` – tweak throttling between API calls
+
+Supported voices (per OpenAI docs at time of writing): `alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`, `coral`, `verse`, `ballad`, `ash`, `sage`, `marin`, `cedar`.
+
+After completion the script prints a manifest you can paste into lesson JSON entries (e.g., `"audioUrl": "/audio/lesson-01/v1.mp3"`).
+
+### 3. Serve files in the app
+
+Files inside `public/` are automatically available at runtime. Once a lesson references `audioUrl`, components can replace synthesized playback with the static asset.
+
+## Linting & Build
+
+```bash
+npm run lint
+npm run build
 ```

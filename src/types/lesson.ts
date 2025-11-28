@@ -2,6 +2,7 @@ export interface Vocabulary {
   id: string;
   pinyin: string;
   english: string;
+  audioUrl?: string;
 }
 
 export interface ConversationUtterance {

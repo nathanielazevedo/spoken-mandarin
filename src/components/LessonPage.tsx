@@ -1,4 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Typography,
   Box,
@@ -17,6 +23,8 @@ import {
   Psychology as PracticeIcon,
   ExpandMore as ExpandMoreIcon,
   ArrowBack as ArrowBackIcon,
+  VolumeUp as VolumeIcon,
+  StopCircle as StopIcon,
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { getLessonById } from "../data";
@@ -33,6 +41,12 @@ export const LessonPage: React.FC = () => {
   const [showConversationFlashcards, setShowConversationFlashcards] =
     useState(false);
   const [showVocabularyPractice, setShowVocabularyPractice] = useState(false);
+  const [isBatchPlaying, setIsBatchPlaying] = useState(false);
+  const [currentAudioIndex, setCurrentAudioIndex] = useState<number | null>(
+    null
+  );
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const lesson = lessonId ? getLessonById(lessonId) : null;
   const conversationFlashcards = useMemo(() => {
@@ -55,6 +69,86 @@ export const LessonPage: React.FC = () => {
   }, [lesson]);
   const turnCount = lesson?.conversation.turns.length ?? 0;
   const sentenceCount = turnCount * 2;
+
+  const stopBatchPlayback = useCallback(() => {
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current.src = "";
+      audioElementRef.current = null;
+    }
+    if (
+      typeof window !== "undefined" &&
+      "speechSynthesis" in window &&
+      speechUtteranceRef.current
+    ) {
+      window.speechSynthesis.cancel();
+      speechUtteranceRef.current = null;
+    }
+    setIsBatchPlaying(false);
+    setCurrentAudioIndex(null);
+  }, []);
+
+  const playWordAtIndex = useCallback(
+    (index: number) => {
+      if (!lesson?.vocabulary[index]) {
+        stopBatchPlayback();
+        return;
+      }
+
+      const entry = lesson.vocabulary[index];
+      setCurrentAudioIndex(index);
+
+      const handleNext = () => playWordAtIndex(index + 1);
+
+      if (entry.audioUrl) {
+        const audio = new Audio(entry.audioUrl);
+        audioElementRef.current = audio;
+        audio.onended = handleNext;
+        audio.onerror = handleNext;
+        audio.play().catch(() => {
+          handleNext();
+        });
+        return;
+      }
+
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(entry.pinyin);
+        speechUtteranceRef.current = utterance;
+        utterance.lang = "zh-CN";
+        utterance.rate = 0.95;
+        utterance.onend = handleNext;
+        utterance.onerror = handleNext;
+        window.speechSynthesis.speak(utterance);
+        return;
+      }
+
+      handleNext();
+    },
+    [lesson, stopBatchPlayback]
+  );
+
+  const handleStartBatchPlayback = useCallback(() => {
+    if (!lesson?.vocabulary.length) {
+      return;
+    }
+    stopBatchPlayback();
+    setIsBatchPlaying(true);
+    playWordAtIndex(0);
+  }, [lesson, playWordAtIndex, stopBatchPlayback]);
+
+  const handleBatchPlaybackToggle = useCallback(() => {
+    if (isBatchPlaying) {
+      stopBatchPlayback();
+    } else {
+      handleStartBatchPlayback();
+    }
+  }, [handleStartBatchPlayback, isBatchPlaying, stopBatchPlayback]);
+
+  useEffect(() => {
+    return () => {
+      stopBatchPlayback();
+    };
+  }, [stopBatchPlayback]);
 
   if (!lesson) {
     return (
@@ -167,6 +261,13 @@ export const LessonPage: React.FC = () => {
                 Flashcards
               </Button> */}
               <Button
+                variant="outlined"
+                startIcon={isBatchPlaying ? <StopIcon /> : <VolumeIcon />}
+                onClick={handleBatchPlaybackToggle}
+              >
+                {isBatchPlaying ? "Stop audio" : "Listen to deck"}
+              </Button>
+              <Button
                 variant="contained"
                 startIcon={<PracticeIcon />}
                 onClick={() => setShowVocabularyPractice(true)}
@@ -205,23 +306,38 @@ export const LessonPage: React.FC = () => {
                   width: "100%",
                 }}
               >
-                {lesson.vocabulary.map((vocab) => (
-                  <Box
-                    key={vocab.id}
-                    sx={{
-                      p: 2,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 2,
-                      backgroundColor: "background.default",
-                    }}
-                  >
-                    <Typography variant="h6" fontWeight={600}>
-                      {vocab.pinyin}
-                    </Typography>
-                    <Typography variant="body1">{vocab.english}</Typography>
-                  </Box>
-                ))}
+                {lesson.vocabulary.map((vocab, index) => {
+                  const isActive =
+                    isBatchPlaying && currentAudioIndex === index;
+                  return (
+                    <Box
+                      key={vocab.id}
+                      sx={{
+                        p: 2,
+                        border: "1px solid",
+                        borderColor: isActive ? "primary.main" : "divider",
+                        borderRadius: 2,
+                        backgroundColor: isActive
+                          ? "action.selected"
+                          : "background.default",
+                        boxShadow: isActive ? 3 : 0,
+                      }}
+                    >
+                      <Typography variant="h6" fontWeight={600}>
+                        {vocab.pinyin}
+                      </Typography>
+                      <Typography variant="body1">{vocab.english}</Typography>
+                      {isActive && (
+                        <Chip
+                          label="Now playing"
+                          size="small"
+                          color="primary"
+                          sx={{ mt: 1 }}
+                        />
+                      )}
+                    </Box>
+                  );
+                })}
               </Box>
             </AccordionDetails>
           </Accordion>
