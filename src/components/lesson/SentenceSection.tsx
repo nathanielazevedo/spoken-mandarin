@@ -57,6 +57,11 @@ export interface SentenceSectionProps {
   onGenerateHanzi?: (sentenceId: string) => void;
   generatingHanziId?: string | null;
   audioVoices?: Record<string, string>;
+  onEditSentence?: (
+    id: string,
+    payload: { pinyin: string; english: string }
+  ) => Promise<void> | void;
+  updatingSentenceId?: string | null;
   reorderingEnabled?: boolean;
   listenPauseMs?: number;
   listenPauseMinMs?: number;
@@ -94,6 +99,8 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
   onGenerateHanzi,
   generatingHanziId,
   audioVoices,
+  onEditSentence,
+  updatingSentenceId,
   reorderingEnabled = true,
   listenPauseMs,
   listenPauseMinMs,
@@ -317,6 +324,13 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
                   }
                   isGeneratingHanzi={generatingHanziId === sentence.id}
                   audioVoice={audioVoices?.[sentence.id]}
+                  onEditEntry={
+                    onEditSentence
+                      ? (payload: { pinyin: string; english: string }) =>
+                          onEditSentence(sentence.id, payload)
+                      : undefined
+                  }
+                  isUpdating={updatingSentenceId === sentence.id}
                   showDragHandle={reorderingEnabled}
                 />
               ))}

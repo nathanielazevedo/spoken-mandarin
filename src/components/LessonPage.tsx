@@ -122,6 +122,9 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   const [updatingVocabularyId, setUpdatingVocabularyId] = useState<
     string | null
   >(null);
+  const [updatingSentenceId, setUpdatingSentenceId] = useState<string | null>(
+    null
+  );
   const [verifyingVocabularyId, setVerifyingVocabularyId] = useState<
     string | null
   >(null);
@@ -273,6 +276,31 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
       tokenizePinyinWords(sentence.pinyin)
     );
 
+    const containsTokenSequence = (
+      haystack: string[],
+      needle: string[]
+    ): boolean => {
+      if (!needle.length) {
+        return false;
+      }
+      if (needle.length === 1) {
+        return haystack.includes(needle[0]);
+      }
+      for (let i = 0; i <= haystack.length - needle.length; i += 1) {
+        let matches = true;
+        for (let j = 0; j < needle.length; j += 1) {
+          if (haystack[i + j] !== needle[j]) {
+            matches = false;
+            break;
+          }
+        }
+        if (matches) {
+          return true;
+        }
+      }
+      return false;
+    };
+
     const matches: Record<string, PracticeEntry[]> = {};
 
     vocabularyList.forEach((vocab) => {
@@ -283,7 +311,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
 
       const matched: PracticeEntry[] = [];
       sentenceTokens.forEach((tokens, index) => {
-        if (tokens.some((token) => vocabTokens.includes(token))) {
+        if (containsTokenSequence(tokens, vocabTokens)) {
           matched.push(sentences[index]);
         }
       });
@@ -631,6 +659,59 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
         setActionError((err as Error).message || "Failed to update vocabulary");
       } finally {
         setUpdatingVocabularyId(null);
+      }
+    },
+    [ensureEditable]
+  );
+
+  const handleUpdateSentence = useCallback(
+    async (
+      sentenceId: string,
+      payload: { pinyin: string; english: string }
+    ) => {
+      if (!ensureEditable()) {
+        return;
+      }
+
+      const pinyin = payload.pinyin.trim();
+      const english = payload.english.trim();
+
+      if (!pinyin || !english) {
+        setActionError("Please provide both pinyin and English");
+        return;
+      }
+
+      setActionError(null);
+      setUpdatingSentenceId(sentenceId);
+
+      try {
+        const response = await fetch(`/api/sentences/${sentenceId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pinyin, english }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to update sentence");
+        }
+
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            sentences: prev.sentences.map((entry) =>
+              entry.id === sentenceId ? { ...entry, pinyin, english } : entry
+            ),
+          };
+        });
+      } catch (err) {
+        console.error("Failed to update sentence", err);
+        setActionError((err as Error).message || "Failed to update sentence");
+      } finally {
+        setUpdatingSentenceId(null);
       }
     },
     [ensureEditable]
@@ -2186,6 +2267,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
         vocabulary={lesson.vocabulary}
         onClose={() => setShowVocabularyPractice(false)}
         onEntryCompleted={handlePracticeEntryCompleted}
+        sentenceMatches={vocabularySentenceMatches}
       />
     );
   }
@@ -2341,6 +2423,8 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
           }
           generatingHanziId={generatingSentenceHanziId}
           audioVoices={sentenceAudioVoices}
+          onEditSentence={canEditLesson ? handleUpdateSentence : undefined}
+          updatingSentenceId={updatingSentenceId}
           reorderingEnabled={canEditLesson}
           listenPauseMs={sentencePauseMs}
           listenPauseMinMs={LISTEN_PAUSE_MIN_MS}

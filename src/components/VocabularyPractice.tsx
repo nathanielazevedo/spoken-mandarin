@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Box,
   Button,
@@ -17,6 +23,7 @@ import {
   Pause as PauseIcon,
   PlayArrow as PlayIcon,
   RestartAlt as RestartIcon,
+  VolumeUpRounded as VolumeIcon,
 } from "@mui/icons-material";
 import type { PracticeEntry } from "../types/lesson";
 import { normalizePinyin } from "../utils/pinyin";
@@ -26,6 +33,7 @@ interface VocabularyPracticeProps {
   onClose: () => void;
   itemLabel?: string;
   onEntryCompleted?: (entry: PracticeEntry, proceed: () => void) => void;
+  sentenceMatches?: Record<string, PracticeEntry[]>;
 }
 
 const TIME_LIMIT_SECONDS = 15;
@@ -49,6 +57,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   onClose,
   itemLabel = "words",
   onEntryCompleted,
+  sentenceMatches,
 }) => {
   const baseVocabulary = useMemo(() => vocabulary.slice(), [vocabulary]);
   const totalVocabularyCount = baseVocabulary.length;
@@ -75,6 +84,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   const [isOverallRunning, setIsOverallRunning] = useState(false);
   const [retryMode, setRetryMode] = useState(false);
   const [retrySuccessCount, setRetrySuccessCount] = useState(0);
+  const sentenceAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const currentWord = activeVocabulary[currentIndex] ?? null;
   const progress = sessionTotal
@@ -83,6 +93,9 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   const progressLabel = sessionTotal
     ? `${Math.min(currentIndex + 1, sessionTotal)} / ${sessionTotal}`
     : "0 / 0";
+  const progressPercentLabel = sessionTotal
+    ? `${progress.toFixed(1)}%`
+    : "0.0%";
   const selectedCount = useMemo(() => {
     if (!totalVocabularyCount || rangeStart === 0 || rangeEnd === 0) {
       return 0;
@@ -187,30 +200,45 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     const isCorrect =
       normalizePinyin(userInput) === normalizePinyin(currentWord.pinyin);
 
-    if (!isCorrect) {
-      handleFailure();
-      return;
-    }
-
     if (retryMode) {
+      if (!isCorrect) {
+        setRetrySuccessCount(0);
+        setUserInput("");
+        setTimeLeft(TIME_LIMIT_SECONDS);
+        setTimeUp(false);
+        return;
+      }
+
       const nextCount = retrySuccessCount + 1;
-      setRevealed(false);
       setRetrySuccessCount(nextCount);
       setUserInput("");
       setTimeLeft(TIME_LIMIT_SECONDS);
       setTimeUp(false);
-      setIsLocked(false);
-      const handleAfterAudio = () => {
-        if (nextCount >= RETRY_SUCCESS_TARGET) {
-          setRetryMode(false);
-          startPractice();
+
+      const playWordAudio = (after?: () => void) => {
+        if (onEntryCompleted) {
+          onEntryCompleted(currentWord, after ?? (() => {}));
+        } else if (after) {
+          after();
         }
       };
-      if (onEntryCompleted) {
-        onEntryCompleted(currentWord, handleAfterAudio);
+
+      if (nextCount >= RETRY_SUCCESS_TARGET) {
+        const restart = () => {
+          setRetryMode(false);
+          setRevealed(false);
+          setIsOverallRunning(false);
+          startPractice();
+        };
+        playWordAudio(restart);
       } else {
-        handleAfterAudio();
+        playWordAudio();
       }
+      return;
+    }
+
+    if (!isCorrect) {
+      handleFailure();
       return;
     }
 
@@ -257,6 +285,17 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     setUserInput("");
     setIsOverallRunning(false);
   }, [completed, currentWord, hasSessionStarted]);
+
+  const handleSkipRetry = useCallback(() => {
+    if (!retryMode) {
+      return;
+    }
+    setRetryMode(false);
+    setRetrySuccessCount(0);
+    setRevealed(false);
+    setIsOverallRunning(true);
+    moveToNext();
+  }, [moveToNext, retryMode]);
 
   const handleRangeStartInputChange = useCallback(
     (value: number) => {
@@ -364,6 +403,42 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   const disableControls = !hasSessionStarted;
   const timerChipColor =
     timeLeft <= 5 && !isPaused ? "error" : isPaused ? "warning" : "default";
+  const matchedSentences = useMemo(() => {
+    if (!sentenceMatches || !currentWord) {
+      return [] as PracticeEntry[];
+    }
+    return sentenceMatches[currentWord.id] ?? [];
+  }, [currentWord, sentenceMatches]);
+  const exampleSentence = matchedSentences[0];
+  const retryRemaining = Math.max(0, RETRY_SUCCESS_TARGET - retrySuccessCount);
+
+  const handlePlaySentenceAudio = useCallback((audioUrl?: string) => {
+    if (!audioUrl) {
+      return;
+    }
+    try {
+      if (sentenceAudioRef.current) {
+        sentenceAudioRef.current.pause();
+        sentenceAudioRef.current = null;
+      }
+      const audio = new Audio(audioUrl);
+      sentenceAudioRef.current = audio;
+      audio.play().catch(() => {
+        /* ignore play errors */
+      });
+    } catch {
+      // Ignore audio errors
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (sentenceAudioRef.current) {
+        sentenceAudioRef.current.pause();
+        sentenceAudioRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <Box
@@ -448,7 +523,13 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
             ) : (
               <>
                 {hasSessionStarted && !!sessionTotal && (
-                  <Chip label={progressLabel} variant="outlined" size="small" />
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip
+                      label={`${progressLabel} (${progressPercentLabel})`}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Stack>
                 )}
                 {hasSessionStarted && (
                   <Chip
@@ -608,6 +689,64 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                 >
                   Check answer
                 </Button>
+                {retryMode && (
+                  <Stack
+                    spacing={1}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 2,
+                      p: 2,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      color="warning.main"
+                      textAlign="center"
+                    >
+                      Type it correctly {retryRemaining} more
+                      {retryRemaining === 1 ? " time" : " times"} to restart the
+                      drill from the beginning.
+                    </Typography>
+                    {exampleSentence && (
+                      <Stack spacing={1}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Example sentence
+                        </Typography>
+                        <Typography variant="body1" fontWeight={600}>
+                          {exampleSentence.english}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                          {exampleSentence.pinyin}
+                        </Typography>
+                        {exampleSentence.hanzi && (
+                          <Typography variant="body2" color="text.secondary">
+                            {exampleSentence.hanzi}
+                          </Typography>
+                        )}
+                        <Button
+                          variant="outlined"
+                          startIcon={<VolumeIcon />}
+                          onClick={() =>
+                            handlePlaySentenceAudio(exampleSentence.audioUrl)
+                          }
+                          disabled={!exampleSentence.audioUrl}
+                          sx={{ alignSelf: "flex-start" }}
+                        >
+                          Play sentence audio
+                        </Button>
+                      </Stack>
+                    )}
+                    <Button
+                      variant="text"
+                      color="primary"
+                      onClick={handleSkipRetry}
+                      sx={{ alignSelf: "flex-end" }}
+                    >
+                      Skip extra practice
+                    </Button>
+                  </Stack>
+                )}
               </Stack>
             </Stack>
           )}
