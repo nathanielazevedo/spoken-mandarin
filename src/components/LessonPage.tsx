@@ -24,6 +24,7 @@ import { AddSentenceDialog } from "./lesson/dialogs/AddSentenceDialog";
 import { BulkUploadDialog } from "./lesson/dialogs/BulkUploadDialog";
 import { normalizePinyinWord } from "../utils/pinyin";
 import { isLocalEnvironment } from "../utils/environment";
+import { loadLessonFromCache, saveLessonToCache } from "../utils/offlineCache";
 
 const LISTEN_PAUSE_MIN_MS = 0;
 const LISTEN_PAUSE_MAX_MS = 3000;
@@ -349,11 +350,25 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
     }
 
     const controller = new AbortController();
+    let isMounted = true;
+
+    const applyLesson = (data: Lesson) => {
+      if (!isMounted) {
+        return;
+      }
+      setLesson(data);
+      setError(null);
+    };
+
+    const cachedLesson = loadLessonFromCache(lessonId);
+    if (cachedLesson) {
+      applyLesson(cachedLesson);
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+    }
 
     const fetchLesson = async () => {
-      setIsLoading(true);
-      setError(null);
-
       try {
         const response = await fetch(`/api/lessons/${lessonId}`, {
           signal: controller.signal,
@@ -368,21 +383,41 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
         }
 
         const data: Lesson = await response.json();
-        setLesson(data);
+        saveLessonToCache(data);
+        applyLesson(data);
       } catch (err) {
         if ((err as Error).name === "AbortError") {
           return;
         }
-        setError((err as Error).message || "Failed to load lesson");
-        setLesson(null);
+        const fallbackLesson = loadLessonFromCache(lessonId);
+        if (fallbackLesson) {
+          applyLesson(fallbackLesson);
+        } else {
+          setError((err as Error).message || "Failed to load lesson");
+          setLesson(null);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
 
-    fetchLesson();
+    if (isOffline) {
+      if (!cachedLesson) {
+        setLesson(null);
+        setError(
+          "You're offline and this lesson hasn't been saved for offline use yet."
+        );
+      }
+      setIsLoading(false);
+    } else {
+      fetchLesson();
+    }
 
     return () => {
+      isMounted = false;
       controller.abort();
     };
   }, [lessonId]);
