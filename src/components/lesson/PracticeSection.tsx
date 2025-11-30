@@ -1,74 +1,120 @@
-import React, { type ReactNode } from "react";
+import React, { Children, type ReactNode } from "react";
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Alert,
   Box,
-  Button,
+  Collapse,
+  IconButton,
   Paper,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
-import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
+import type { IconButtonProps } from "@mui/material/IconButton";
 
 export interface SectionButtonConfig {
   label: string;
   icon: ReactNode;
   onClick: () => void;
   disabled?: boolean;
+  color?: IconButtonProps["color"];
+  ariaLabel?: string;
 }
 
 export interface PracticeSectionProps {
-  icon: ReactNode;
   title: string;
   subtitle: string;
   listenButton: SectionButtonConfig;
   practiceButton: SectionButtonConfig;
   addButton?: SectionButtonConfig;
-  accordionTitle: string;
-  accordionDescription?: string;
   infoMessage?: string | null;
   extraActions?: ReactNode;
+  defaultExpanded?: boolean;
   children: ReactNode;
 }
 
 export const PracticeSection: React.FC<PracticeSectionProps> = ({
-  icon,
   title,
   subtitle,
   listenButton,
   practiceButton,
   addButton,
-  accordionTitle,
-  accordionDescription,
   infoMessage,
   extraActions,
+  defaultExpanded = false,
   children,
-}) => (
-  <Paper
-    sx={{
-      mb: 3,
-      p: { xs: 2.5, sm: 3 },
-      borderRadius: 3,
-      backgroundColor: (theme) => theme.palette.background.paper,
-      border: "1px solid",
-      borderColor: (theme) => theme.palette.divider,
-    }}
-  >
-    <Box
+}) => {
+  const extraActionItems = extraActions ? Children.toArray(extraActions) : [];
+  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+
+  const renderIconButton = (config: SectionButtonConfig) => (
+    <Tooltip title={config.label}>
+      <span
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <IconButton
+          color={config.color ?? "primary"}
+          onClick={config.onClick}
+          disabled={config.disabled}
+          aria-label={config.ariaLabel ?? config.label}
+          sx={{
+            border: "1px solid",
+            borderColor: "divider",
+            width: 48,
+            height: 48,
+          }}
+        >
+          {config.icon}
+        </IconButton>
+      </span>
+    </Tooltip>
+  );
+
+  const toggleExpanded = () => setIsExpanded((prev) => !prev);
+
+  const handleHeaderKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      toggleExpanded();
+    }
+  };
+
+  return (
+    <Paper
+      elevation={4}
       sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        mb: 1,
-        flexWrap: "wrap",
-        gap: 1,
+        mb: 3,
+        p: { xs: 2.5, sm: 3 },
+        borderRadius: 3,
+        backgroundColor: (theme) => theme.palette.background.paper,
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-        {icon}
-        <Box>
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        alignItems={{ xs: "flex-start", md: "center" }}
+        justifyContent="space-between"
+        spacing={2}
+        sx={{
+          mb: 1,
+          width: "100%",
+          cursor: "pointer",
+        }}
+        onClick={toggleExpanded}
+        onKeyDown={handleHeaderKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-expanded={isExpanded}
+      >
+        <Box
+          sx={{
+            cursor: "pointer",
+            width: "100%",
+            outline: "none",
+          }}
+        >
           <Typography variant="h6" fontWeight={600}>
             {title}
           </Typography>
@@ -76,65 +122,44 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
             {subtitle}
           </Typography>
         </Box>
-      </Box>
-      <Stack direction="row" spacing={1} flexWrap="wrap">
-        {extraActions}
-        <Button
-          variant="outlined"
-          startIcon={listenButton.icon}
-          onClick={listenButton.onClick}
-          disabled={listenButton.disabled}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          flexWrap={{ sm: "wrap" }}
+          sx={{
+            width: "100%",
+            justifyContent: { xs: "flex-start", md: "flex-end" },
+            alignItems: { xs: "stretch", sm: "center" },
+            cursor: "default",
+          }}
         >
-          {listenButton.label}
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={practiceButton.icon}
-          onClick={practiceButton.onClick}
-          disabled={practiceButton.disabled}
-        >
-          {practiceButton.label}
-        </Button>
+          {addButton ? renderIconButton(addButton) : null}
+          {extraActionItems.map((action, index) => (
+            <Box
+              key={`extra-action-${index}`}
+              sx={{
+                width: { xs: "100%", sm: "auto" },
+                display: "flex",
+                cursor: "default",
+              }}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              {action}
+            </Box>
+          ))}
+          {renderIconButton(listenButton)}
+          {renderIconButton(practiceButton)}
+        </Stack>
       </Stack>
-    </Box>
-    {addButton && (
-      <Box sx={{ mt: 2 }}>
-        <Button
-          variant="contained"
-          startIcon={addButton.icon}
-          onClick={addButton.onClick}
-          disabled={addButton.disabled}
-        >
-          {addButton.label}
-        </Button>
-      </Box>
-    )}
-    {infoMessage && (
-      <Alert severity="info" sx={{ mt: 2 }}>
-        {infoMessage}
-      </Alert>
-    )}
-    <Accordion
-      sx={{
-        mt: 2,
-        backgroundColor: "background.paper",
-        border: "1px solid",
-        borderColor: "divider",
-      }}
-    >
-      <AccordionSummary
-        expandIcon={<ExpandMoreIcon sx={{ color: "text.secondary" }} />}
-      >
-        <Box>
-          <Typography fontWeight={600}>{accordionTitle}</Typography>
-          {accordionDescription && (
-            <Typography variant="body2" color="text.secondary">
-              {accordionDescription}
-            </Typography>
-          )}
-        </Box>
-      </AccordionSummary>
-      <AccordionDetails>{children}</AccordionDetails>
-    </Accordion>
-  </Paper>
-);
+      {infoMessage && (
+        <Alert severity="info" sx={{ mt: 2 }}>
+          {infoMessage}
+        </Alert>
+      )}
+      <Collapse in={isExpanded} sx={{ mt: 2 }}>
+        {children}
+      </Collapse>
+    </Paper>
+  );
+};

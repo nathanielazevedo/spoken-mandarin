@@ -2,6 +2,7 @@ export interface PracticeEntry {
   id: string;
   pinyin: string;
   english: string;
+  hanzi?: string;
   audioUrl?: string;
 }
 

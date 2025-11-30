@@ -1,15 +1,18 @@
 import React from "react";
-import { Box, Button, Chip, Paper, Stack, Typography } from "@mui/material";
 import {
-  ArrowBack as ArrowBackIcon,
-  UploadFile as UploadFileIcon,
-} from "@mui/icons-material";
+  Box,
+  Button,
+  IconButton,
+  Paper,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 
 export interface LessonHeroProps {
   title: string;
   description: string;
-  vocabularyCount: number;
-  sentenceCount: number;
   onBackClick: () => void;
   onBulkUploadClick?: () => void;
 }
@@ -17,8 +20,6 @@ export interface LessonHeroProps {
 export const LessonHero: React.FC<LessonHeroProps> = ({
   title,
   description,
-  vocabularyCount,
-  sentenceCount,
   onBackClick,
   onBulkUploadClick,
 }) => (
@@ -40,9 +41,8 @@ export const LessonHero: React.FC<LessonHeroProps> = ({
       <Box>
         <Button
           variant="text"
-          startIcon={<ArrowBackIcon />}
           onClick={onBackClick}
-          sx={{ pl: 0, mb: 1, color: "text.secondary" }}
+          sx={{ px: 0, mb: 1, color: "text.secondary" }}
         >
           Back to Lessons
         </Button>
@@ -52,31 +52,29 @@ export const LessonHero: React.FC<LessonHeroProps> = ({
         <Typography color="text.secondary">{description}</Typography>
       </Box>
       <Stack
-        direction="row"
+        direction={{ xs: "column", sm: "row" }}
         spacing={1}
-        flexWrap="wrap"
-        alignItems="center"
+        alignItems={{ xs: "stretch", sm: "center" }}
         justifyContent={{ xs: "flex-start", sm: "flex-end" }}
+        sx={{ width: { xs: "100%", sm: "auto" } }}
       >
         {onBulkUploadClick && (
-          <Button
-            variant="outlined"
-            startIcon={<UploadFileIcon />}
-            onClick={onBulkUploadClick}
-          >
-            Bulk upload JSON
-          </Button>
+          <Tooltip title="Bulk upload JSON">
+            <IconButton
+              onClick={onBulkUploadClick}
+              color="primary"
+              aria-label="Bulk upload JSON"
+              sx={{
+                border: 1,
+                borderColor: "divider",
+                width: 48,
+                height: 48,
+              }}
+            >
+              <UploadFileRoundedIcon />
+            </IconButton>
+          </Tooltip>
         )}
-        <Chip
-          color="primary"
-          variant="outlined"
-          label={`${vocabularyCount} vocab words`}
-        />
-        <Chip
-          color="secondary"
-          variant="outlined"
-          label={`${sentenceCount} sentences`}
-        />
       </Stack>
     </Stack>
   </Paper>

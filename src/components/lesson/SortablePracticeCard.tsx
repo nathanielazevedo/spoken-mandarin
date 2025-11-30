@@ -16,9 +16,13 @@ import {
 import {
   Audiotrack as AudiotrackIcon,
   AutoAwesome as AutoAwesomeIcon,
+  Close as CloseIcon,
   Delete as DeleteIcon,
   DragIndicator as DragIndicatorIcon,
+  Edit as EditIcon,
   KeyboardDoubleArrowDown as MoveToEndIcon,
+  Translate as TranslateIcon,
+  Spellcheck as SpellcheckIcon,
 } from "@mui/icons-material";
 import type { PracticeEntry } from "../../types/lesson";
 import { normalizePinyinWord } from "../../utils/pinyin";
@@ -36,6 +40,7 @@ export interface SortablePracticeCardProps {
   onPlay: () => void;
   onDelete?: () => void;
   onRegenerateAudio?: () => void;
+  audioVoice?: string;
   onGenerateSentence?: () => void;
   onSaveGeneratedSentence?: () => void;
   onClearGeneratedSentence?: () => void;
@@ -47,6 +52,19 @@ export interface SortablePracticeCardProps {
   onMoveToEnd?: () => void;
   onUpdateOrder?: (nextPosition: number) => void;
   orderNumber?: number;
+  onEditEntry?: (payload: {
+    pinyin: string;
+    english: string;
+  }) => Promise<void> | void;
+  isUpdating?: boolean;
+  onVerifyPinyin?: () => void;
+  isVerifying?: boolean;
+  verificationResult?: {
+    status: "success" | "error";
+    message: string | null;
+  };
+  onGenerateHanzi?: () => Promise<void> | void;
+  isGeneratingHanzi?: boolean;
 }
 
 export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
@@ -62,6 +80,7 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
   onPlay,
   onDelete,
   onRegenerateAudio,
+  audioVoice,
   onGenerateSentence,
   onSaveGeneratedSentence,
   onClearGeneratedSentence,
@@ -73,7 +92,19 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
   onMoveToEnd,
   onUpdateOrder,
   orderNumber,
+  onEditEntry,
+  isUpdating,
+  onVerifyPinyin,
+  isVerifying,
+  verificationResult,
+  onGenerateHanzi,
+  isGeneratingHanzi,
 }) => {
+  const [isEditingWord, setIsEditingWord] = useState(false);
+  const [editPinyin, setEditPinyin] = useState(entry.pinyin);
+  const [editEnglish, setEditEnglish] = useState(entry.english);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const {
     attributes,
     listeners,
@@ -97,6 +128,7 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
   const [orderInput, setOrderInput] = useState(orderNumber?.toString() ?? "");
   const hasAudio = Boolean(entry.audioUrl && entry.audioUrl.trim());
   const hasSentenceMatches = sentenceMatches.length > 0;
+  const isHanziMissing = !entry.hanzi?.trim();
   const isMatchesVisible = hasSentenceMatches && isMatchesOpen;
   const highlightedPinyinSegments = useMemo(() => {
     if (!vocabularyWordSet) {
@@ -120,6 +152,60 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
       setOrderInput(orderNumber.toString());
     }
   }, [isEditingOrder, orderNumber]);
+
+  useEffect(() => {
+    if (!isEditingWord) {
+      setEditPinyin(entry.pinyin);
+      setEditEnglish(entry.english);
+    }
+  }, [entry.english, entry.pinyin, isEditingWord]);
+
+  const handleStartEdit = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setEditError(null);
+    setEditPinyin(entry.pinyin);
+    setEditEnglish(entry.english);
+    setIsEditingWord(true);
+  };
+
+  const handleCancelEdit = (event?: React.SyntheticEvent) => {
+    event?.stopPropagation();
+    setIsEditingWord(false);
+    setEditError(null);
+    setEditPinyin(entry.pinyin);
+    setEditEnglish(entry.english);
+    setIsSavingEdit(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!onEditEntry) {
+      setIsEditingWord(false);
+      return;
+    }
+
+    const trimmedPinyin = editPinyin.trim();
+    const trimmedEnglish = editEnglish.trim();
+
+    if (!trimmedPinyin || !trimmedEnglish) {
+      setEditError("Enter both pinyin and English");
+      return;
+    }
+
+    setEditError(null);
+    setIsSavingEdit(true);
+
+    try {
+      await onEditEntry({ pinyin: trimmedPinyin, english: trimmedEnglish });
+      setIsEditingWord(false);
+    } catch (err) {
+      setEditError((err as Error).message || "Failed to update word");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const editingDisabled = isUpdating || isSavingEdit;
+  const dragHandleListeners = isEditingWord ? undefined : listeners;
 
   const handleOrderChipClick = (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -189,9 +275,9 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
         borderRadius: 2,
         backgroundColor: isActive ? "action.selected" : "background.default",
         boxShadow: isActive ? 3 : 0,
-        cursor: "pointer",
+        cursor: isEditingWord ? "default" : "pointer",
       }}
-      onClick={onPlay}
+      onClick={isEditingWord ? undefined : onPlay}
     >
       <Stack
         direction="row"
@@ -211,7 +297,7 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
               size="small"
               disabled={dragDisabled}
               {...attributes}
-              {...listeners}
+              {...(dragHandleListeners ?? {})}
               sx={{
                 color: "text.secondary",
                 cursor: dragDisabled ? "not-allowed" : "grab",
@@ -238,6 +324,50 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
             </span>
           </Tooltip>
         )}
+        {onVerifyPinyin && (
+          <Tooltip title="Verify pinyin">
+            <span>
+              <IconButton
+                size="small"
+                disabled={Boolean(isVerifying)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onVerifyPinyin();
+                }}
+                sx={{ color: "text.secondary" }}
+              >
+                {isVerifying ? (
+                  <CircularProgress size={16} thickness={5} />
+                ) : (
+                  <SpellcheckIcon fontSize="small" />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
+        {onGenerateHanzi && (
+          <Tooltip
+            title={entry.hanzi ? "Refresh characters" : "Fetch characters"}
+          >
+            <span>
+              <IconButton
+                size="small"
+                disabled={Boolean(isGeneratingHanzi)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onGenerateHanzi();
+                }}
+                sx={{ color: "text.secondary" }}
+              >
+                {isGeneratingHanzi ? (
+                  <CircularProgress size={16} thickness={5} />
+                ) : (
+                  <TranslateIcon fontSize="small" />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
         {onRegenerateAudio && (
           <Tooltip title="Regenerate audio">
             <span>
@@ -254,6 +384,33 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
                   <CircularProgress size={16} thickness={5} />
                 ) : (
                   <AudiotrackIcon fontSize="small" />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
+        {onEditEntry && (
+          <Tooltip title={isEditingWord ? "Close editor" : "Edit word"}>
+            <span>
+              <IconButton
+                size="small"
+                disabled={editingDisabled}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (isEditingWord) {
+                    handleCancelEdit(event);
+                  } else {
+                    handleStartEdit(event);
+                  }
+                }}
+                sx={{ color: "text.secondary" }}
+              >
+                {editingDisabled ? (
+                  <CircularProgress size={16} thickness={5} />
+                ) : isEditingWord ? (
+                  <CloseIcon fontSize="small" />
+                ) : (
+                  <EditIcon fontSize="small" />
                 )}
               </IconButton>
             </span>
@@ -350,68 +507,161 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
               sx={{ fontWeight: 600 }}
             />
           )}
+          {audioVoice && (
+            <Chip
+              size="small"
+              label={`Voice: ${audioVoice}`}
+              color="default"
+              variant="outlined"
+              sx={{ fontWeight: 600, textTransform: "capitalize" }}
+            />
+          )}
+          {isHanziMissing && (
+            <Chip
+              size="small"
+              label="Chars missing"
+              color="info"
+              variant="outlined"
+              sx={{ fontWeight: 600 }}
+            />
+          )}
         </Stack>
       )}
-      <Typography variant="h6" fontWeight={600} sx={{ pr: 8 }}>
-        {highlightedPinyinSegments
-          ? highlightedPinyinSegments.map((segment, index) => {
-              const trimmedWord = segment.text.trim();
-              const isClickable = Boolean(
-                segment.highlight && trimmedWord && onMissingWordClick
-              );
-
-              const handleClick = (
-                event: React.MouseEvent<HTMLSpanElement>
-              ) => {
-                if (!isClickable || !trimmedWord) {
-                  return;
-                }
+      {isEditingWord ? (
+        <Stack spacing={1} sx={{ pr: 8 }}>
+          <TextField
+            label="Pinyin"
+            size="small"
+            value={editPinyin}
+            onChange={(event) => setEditPinyin(event.target.value)}
+            fullWidth
+            autoFocus
+          />
+          <TextField
+            label="English"
+            size="small"
+            value={editEnglish}
+            onChange={(event) => setEditEnglish(event.target.value)}
+            fullWidth
+          />
+          {editError && (
+            <Typography variant="caption" color="error">
+              {editError}
+            </Typography>
+          )}
+          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+            <Button
+              size="small"
+              variant="contained"
+              onClick={(event) => {
                 event.stopPropagation();
-                onMissingWordClick?.(trimmedWord);
-              };
+                void handleSaveEdit();
+              }}
+              disabled={editingDisabled}
+              sx={{ display: "flex", alignItems: "center", gap: 1 }}
+            >
+              Save
+              {(isSavingEdit || isUpdating) && (
+                <CircularProgress size={16} thickness={5} />
+              )}
+            </Button>
+            <Button
+              size="small"
+              onClick={(event) => handleCancelEdit(event)}
+              disabled={editingDisabled}
+            >
+              Cancel
+            </Button>
+          </Stack>
+        </Stack>
+      ) : (
+        <>
+          <Typography variant="h6" fontWeight={600} sx={{ pr: 8 }}>
+            {highlightedPinyinSegments
+              ? highlightedPinyinSegments.map((segment, index) => {
+                  const trimmedWord = segment.text.trim();
+                  const isClickable = Boolean(
+                    segment.highlight && trimmedWord && onMissingWordClick
+                  );
 
-              const handleKeyDown = (
-                event: React.KeyboardEvent<HTMLSpanElement>
-              ) => {
-                if (!isClickable || !trimmedWord) {
-                  return;
-                }
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onMissingWordClick?.(trimmedWord);
-                }
-              };
+                  const handleClick = (
+                    event: React.MouseEvent<HTMLSpanElement>
+                  ) => {
+                    if (!isClickable || !trimmedWord) {
+                      return;
+                    }
+                    event.stopPropagation();
+                    onMissingWordClick?.(trimmedWord);
+                  };
 
-              return (
-                <Box
-                  component="span"
-                  key={`${entry.id}-segment-${index}`}
-                  role={isClickable ? "button" : undefined}
-                  tabIndex={isClickable ? 0 : undefined}
-                  onClick={isClickable ? handleClick : undefined}
-                  onKeyDown={isClickable ? handleKeyDown : undefined}
-                  sx={{
-                    ...(segment.highlight
-                      ? { color: "error.main", fontWeight: 700 }
-                      : undefined),
-                    ...(isClickable
-                      ? {
-                          cursor: "pointer",
-                          textDecoration: "underline dotted",
-                        }
-                      : undefined),
-                  }}
-                >
-                  {segment.text}
-                </Box>
-              );
-            })
-          : entry.pinyin}
-      </Typography>
-      <Typography variant="body1" sx={{ pr: 8 }}>
-        {entry.english}
-      </Typography>
+                  const handleKeyDown = (
+                    event: React.KeyboardEvent<HTMLSpanElement>
+                  ) => {
+                    if (!isClickable || !trimmedWord) {
+                      return;
+                    }
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onMissingWordClick?.(trimmedWord);
+                    }
+                  };
+
+                  return (
+                    <Box
+                      component="span"
+                      key={`${entry.id}-segment-${index}`}
+                      role={isClickable ? "button" : undefined}
+                      tabIndex={isClickable ? 0 : undefined}
+                      onClick={isClickable ? handleClick : undefined}
+                      onKeyDown={isClickable ? handleKeyDown : undefined}
+                      sx={{
+                        ...(segment.highlight
+                          ? { color: "error.main", fontWeight: 700 }
+                          : undefined),
+                        ...(isClickable
+                          ? {
+                              cursor: "pointer",
+                              textDecoration: "underline dotted",
+                            }
+                          : undefined),
+                      }}
+                    >
+                      {segment.text}
+                    </Box>
+                  );
+                })
+              : entry.pinyin}
+          </Typography>
+          <Typography variant="body1" sx={{ pr: 8 }}>
+            {entry.english}
+          </Typography>
+          {verificationResult && (
+            <Tooltip
+              title={
+                verificationResult.message ||
+                (verificationResult.status === "success"
+                  ? "Pinyin and hanzi verified"
+                  : "Verification issue")
+              }
+            >
+              <Chip
+                size="small"
+                label={
+                  verificationResult.status === "success"
+                    ? "Pinyin & hanzi verified"
+                    : "Needs review"
+                }
+                color={
+                  verificationResult.status === "success" ? "success" : "error"
+                }
+                variant="outlined"
+                sx={{ alignSelf: "flex-start", mt: 1 }}
+              />
+            </Tooltip>
+          )}
+        </>
+      )}
       {duplicateMatches.length > 0 && (
         <Box
           sx={{

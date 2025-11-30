@@ -6,15 +6,15 @@ import {
 } from "@dnd-kit/sortable";
 import {
   Alert,
-  Button,
+  Badge,
   IconButton,
   InputAdornment,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
-  School as FlashcardIcon,
   Psychology as PracticeIcon,
   VolumeUp as VolumeIcon,
   StopCircle as StopIcon,
@@ -22,6 +22,7 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
   GraphicEq as AudioWaveIcon,
+  Translate as TranslateIcon,
 } from "@mui/icons-material";
 import type { PracticeEntry } from "../../types/lesson";
 import { PracticeSection } from "./PracticeSection";
@@ -74,12 +75,29 @@ export interface VocabularySectionProps {
   missingAudioCount?: number;
   isGeneratingMissingAudio?: boolean;
   onGenerateMissingAudio?: () => void;
+  missingHanziCount?: number;
+  isGeneratingMissingHanzi?: boolean;
+  onGenerateMissingHanzi?: () => void;
+  audioVoices?: Record<string, string>;
   onPlayWord: (id: string) => void;
   onDeleteWord?: (id: string) => void;
   onRegenerateAudio?: (id: string) => void;
   onMoveWordToEnd?: (id: string) => void;
   onChangeWordOrder?: (id: string, nextPosition: number) => void;
   reorderingEnabled?: boolean;
+  onEditWord?: (
+    id: string,
+    payload: { pinyin: string; english: string }
+  ) => Promise<void> | void;
+  updatingWordId?: string | null;
+  onVerifyWord?: (id: string) => Promise<void> | void;
+  verifyingWordId?: string | null;
+  verificationResults?: Record<
+    string,
+    { status: "success" | "error"; message: string | null }
+  >;
+  onGenerateHanzi?: (id: string) => Promise<void> | void;
+  generatingHanziId?: string | null;
 }
 
 export const VocabularySection: React.FC<VocabularySectionProps> = ({
@@ -103,151 +121,212 @@ export const VocabularySection: React.FC<VocabularySectionProps> = ({
   onBatchToggle,
   onPracticeClick,
   onAddWordClick,
-  onFlashcardsClick,
   currentAudioId,
   deletingWordId,
   generatingAudioId,
   missingAudioCount,
   isGeneratingMissingAudio,
   onGenerateMissingAudio,
+  missingHanziCount,
+  isGeneratingMissingHanzi,
+  onGenerateMissingHanzi,
+  audioVoices,
   onPlayWord,
   onDeleteWord,
   onRegenerateAudio,
   onMoveWordToEnd,
   onChangeWordOrder,
   reorderingEnabled = true,
-}) => (
-  <PracticeSection
-    icon={<FlashcardIcon sx={{ color: "primary.main" }} />}
-    title="Vocabulary"
-    subtitle={`${vocabulary.length} words`}
-    listenButton={{
-      label: isBatchPlaying ? "Stop audio" : "Listen to deck",
-      icon: isBatchPlaying ? <StopIcon /> : <VolumeIcon />,
-      onClick: onBatchToggle,
-      disabled: !vocabulary.length,
-    }}
-    practiceButton={{
-      label: "Practice",
-      icon: <PracticeIcon />,
-      onClick: onPracticeClick,
-      disabled: !vocabulary.length,
-    }}
-    addButton={
-      onAddWordClick
-        ? {
-            label: "Add word",
-            icon: <AddIcon />,
-            onClick: onAddWordClick,
-            disabled: false,
-          }
-        : undefined
-    }
-    accordionTitle="Tap to view vocabulary list"
-    infoMessage={
-      reorderingEnabled && isSavingOrder ? "Saving new order..." : null
-    }
-    extraActions={
-      <Stack direction="row" spacing={1} flexWrap="wrap">
-        {onGenerateMissingAudio && (
-          <Button
-            key="generate-audio"
-            variant="outlined"
-            startIcon={<AudioWaveIcon />}
-            onClick={onGenerateMissingAudio}
-            disabled={
-              isGeneratingMissingAudio ||
-              !missingAudioCount ||
-              !vocabulary.length
+  onEditWord,
+  updatingWordId,
+  onVerifyWord,
+  verifyingWordId,
+  verificationResults,
+  onGenerateHanzi,
+  generatingHanziId,
+}) => {
+  const generateAudioLabel = isGeneratingMissingAudio
+    ? "Generating audio..."
+    : missingAudioCount && missingAudioCount > 0
+    ? `Generate audio (${missingAudioCount})`
+    : "Generate missing audio";
+  const generateHanziLabel = isGeneratingMissingHanzi
+    ? "Generating hanzi..."
+    : missingHanziCount && missingHanziCount > 0
+    ? `Generate hanzi (${missingHanziCount})`
+    : "Generate missing hanzi";
+
+  return (
+    <PracticeSection
+      title="Vocabulary"
+      subtitle={`${vocabulary.length} words`}
+      listenButton={{
+        label: isBatchPlaying ? "Stop audio" : "Listen to deck",
+        icon: isBatchPlaying ? <StopIcon /> : <VolumeIcon />,
+        onClick: onBatchToggle,
+        disabled: !vocabulary.length,
+      }}
+      practiceButton={{
+        label: "Practice",
+        icon: <PracticeIcon />,
+        onClick: onPracticeClick,
+        disabled: !vocabulary.length,
+      }}
+      addButton={
+        onAddWordClick
+          ? {
+              label: "Add word",
+              icon: <AddIcon />,
+              onClick: onAddWordClick,
+              disabled: false,
             }
-          >
-            {isGeneratingMissingAudio
-              ? "Generating audio..."
-              : missingAudioCount && missingAudioCount > 0
-              ? `Generate audio (${missingAudioCount})`
-              : "Generate missing audio"}
-          </Button>
-        )}
-        <Button
-          key="flashcards"
-          variant="outlined"
-          startIcon={<FlashcardIcon />}
-          onClick={onFlashcardsClick}
-          disabled={!vocabulary.length}
-        >
-          Flashcards
-        </Button>
-      </Stack>
-    }
-  >
-    {vocabulary.length === 0 ? (
-      <Typography color="text.secondary">No vocabulary yet.</Typography>
-    ) : (
-      <>
-        <TextField
-          size="small"
-          placeholder="Search pinyin or English"
-          value={searchTerm ?? ""}
-          onChange={(event) => onSearchTermChange?.(event.target.value)}
-          fullWidth
-          sx={{ mb: 2 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
-              </InputAdornment>
-            ),
-            endAdornment:
-              searchTerm && searchTerm.length > 0 ? (
-                <InputAdornment position="end">
-                  <IconButton
-                    size="small"
-                    onClick={() => onSearchTermChange?.("")}
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
+          : undefined
+      }
+      infoMessage={
+        reorderingEnabled && isSavingOrder ? "Saving new order..." : null
+      }
+      extraActions={
+        <Stack direction="row" spacing={1} flexWrap="wrap">
+          {onGenerateMissingAudio && (
+            <Tooltip title={generateAudioLabel} key="generate-audio">
+              <span>
+                <IconButton
+                  color="primary"
+                  onClick={onGenerateMissingAudio}
+                  disabled={
+                    isGeneratingMissingAudio ||
+                    !missingAudioCount ||
+                    !vocabulary.length
+                  }
+                  aria-label="Generate missing audio"
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    width: 48,
+                    height: 48,
+                  }}
+                >
+                  {missingAudioCount && missingAudioCount > 0 ? (
+                    <Badge color="secondary" badgeContent={missingAudioCount}>
+                      <AudioWaveIcon />
+                    </Badge>
+                  ) : (
+                    <AudioWaveIcon />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {onGenerateMissingHanzi && (
+            <Tooltip title={generateHanziLabel} key="generate-hanzi">
+              <span>
+                <IconButton
+                  color="primary"
+                  onClick={onGenerateMissingHanzi}
+                  disabled={
+                    isGeneratingMissingHanzi ||
+                    !missingHanziCount ||
+                    !vocabulary.length
+                  }
+                  aria-label="Generate missing hanzi"
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    width: 48,
+                    height: 48,
+                  }}
+                >
+                  {missingHanziCount && missingHanziCount > 0 ? (
+                    <Badge color="secondary" badgeContent={missingHanziCount}>
+                      <TranslateIcon />
+                    </Badge>
+                  ) : (
+                    <TranslateIcon />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+        </Stack>
+      }
+    >
+      {vocabulary.length === 0 ? (
+        <Typography color="text.secondary">No vocabulary yet.</Typography>
+      ) : (
+        <>
+          <TextField
+            size="small"
+            placeholder="Search pinyin or English"
+            value={searchTerm ?? ""}
+            onChange={(event) => onSearchTermChange?.(event.target.value)}
+            fullWidth
+            sx={{ mb: 2 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
                 </InputAdornment>
-              ) : undefined,
-          }}
-        />
-        {duplicateVocabularyGroups?.length ? (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Duplicate pinyin detected for{" "}
-            {duplicateVocabularyGroups
-              .map((group) => group.entries[0]?.pinyin || "(unknown)")
-              .join(", ")}
-            .
-          </Alert>
-        ) : null}
-        <VocabularyListContent
-          vocabulary={vocabulary}
-          searchTerm={searchTerm}
-          sentenceMatches={sentenceMatches}
-          duplicateVocabularyMap={duplicateVocabularyMap}
-          sensors={sensors}
-          onDragEnd={reorderingEnabled ? onDragEnd : undefined}
-          isSavingOrder={isSavingOrder}
-          currentAudioId={currentAudioId}
-          deletingWordId={deletingWordId}
-          generatingAudioId={generatingAudioId}
-          onPlayWord={onPlayWord}
-          onDeleteWord={onDeleteWord}
-          onRegenerateAudio={onRegenerateAudio}
-          onMoveWordToEnd={onMoveWordToEnd}
-          onChangeWordOrder={onChangeWordOrder}
-          reorderingEnabled={reorderingEnabled}
-          generatedSentenceSuggestions={generatedSentenceSuggestions}
-          generatingSentenceIds={generatingSentenceIds}
-          savingSentenceIds={savingSentenceIds}
-          sentenceGenerationErrors={sentenceGenerationErrors}
-          onGenerateSentence={onGenerateSentence}
-          onSaveGeneratedSentence={onSaveGeneratedSentence}
-          onDismissGeneratedSentence={onDismissGeneratedSentence}
-        />
-      </>
-    )}
-  </PracticeSection>
-);
+              ),
+              endAdornment:
+                searchTerm && searchTerm.length > 0 ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => onSearchTermChange?.("")}
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : undefined,
+            }}
+          />
+          {duplicateVocabularyGroups?.length ? (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Duplicate pinyin detected for{" "}
+              {duplicateVocabularyGroups
+                .map((group) => group.entries[0]?.pinyin || "(unknown)")
+                .join(", ")}
+              .
+            </Alert>
+          ) : null}
+          <VocabularyListContent
+            vocabulary={vocabulary}
+            searchTerm={searchTerm}
+            sentenceMatches={sentenceMatches}
+            duplicateVocabularyMap={duplicateVocabularyMap}
+            sensors={sensors}
+            onDragEnd={reorderingEnabled ? onDragEnd : undefined}
+            isSavingOrder={isSavingOrder}
+            currentAudioId={currentAudioId}
+            deletingWordId={deletingWordId}
+            generatingAudioId={generatingAudioId}
+            audioVoices={audioVoices}
+            onPlayWord={onPlayWord}
+            onDeleteWord={onDeleteWord}
+            onRegenerateAudio={onRegenerateAudio}
+            onMoveWordToEnd={onMoveWordToEnd}
+            onChangeWordOrder={onChangeWordOrder}
+            reorderingEnabled={reorderingEnabled}
+            generatedSentenceSuggestions={generatedSentenceSuggestions}
+            generatingSentenceIds={generatingSentenceIds}
+            savingSentenceIds={savingSentenceIds}
+            sentenceGenerationErrors={sentenceGenerationErrors}
+            onGenerateSentence={onGenerateSentence}
+            onSaveGeneratedSentence={onSaveGeneratedSentence}
+            onDismissGeneratedSentence={onDismissGeneratedSentence}
+            onEditWord={onEditWord}
+            updatingWordId={updatingWordId}
+            onVerifyWord={onVerifyWord}
+            verifyingWordId={verifyingWordId}
+            verificationResults={verificationResults}
+            onGenerateHanzi={onGenerateHanzi}
+            generatingHanziId={generatingHanziId}
+          />
+        </>
+      )}
+    </PracticeSection>
+  );
+};
 
 interface VocabularyListContentProps
   extends Pick<
@@ -272,7 +351,15 @@ interface VocabularyListContentProps
     | "onChangeWordOrder"
     | "onDeleteWord"
     | "onRegenerateAudio"
+    | "onEditWord"
+    | "updatingWordId"
     | "reorderingEnabled"
+    | "onVerifyWord"
+    | "verifyingWordId"
+    | "verificationResults"
+    | "onGenerateHanzi"
+    | "generatingHanziId"
+    | "audioVoices"
   > {
   vocabulary: PracticeEntry[];
   searchTerm?: string;
@@ -289,7 +376,10 @@ const VocabularyListContent: React.FC<VocabularyListContentProps> = ({
   currentAudioId,
   deletingWordId,
   generatingAudioId,
+  audioVoices,
   onPlayWord,
+  onGenerateHanzi,
+  generatingHanziId,
   onDeleteWord,
   onRegenerateAudio,
   generatedSentenceSuggestions,
@@ -302,6 +392,11 @@ const VocabularyListContent: React.FC<VocabularyListContentProps> = ({
   onMoveWordToEnd,
   onChangeWordOrder,
   reorderingEnabled = true,
+  onEditWord,
+  updatingWordId,
+  onVerifyWord,
+  verifyingWordId,
+  verificationResults,
 }) => {
   const normalizedSearch = searchTerm ? toSearchKey(searchTerm) : "";
   const displaySearchTerm = searchTerm?.trim() ?? "";
@@ -385,6 +480,11 @@ const VocabularyListContent: React.FC<VocabularyListContentProps> = ({
                   ? () => onRegenerateAudio(vocab.id)
                   : undefined
               }
+              audioVoice={audioVoices?.[vocab.id]}
+              onGenerateHanzi={
+                onGenerateHanzi ? () => onGenerateHanzi(vocab.id) : undefined
+              }
+              isGeneratingHanzi={generatingHanziId === vocab.id}
               onMoveToEnd={
                 onMoveWordToEnd ? () => onMoveWordToEnd(vocab.id) : undefined
               }
@@ -395,6 +495,18 @@ const VocabularyListContent: React.FC<VocabularyListContentProps> = ({
                   : undefined
               }
               orderNumber={orderNumberMap.get(vocab.id)}
+              onEditEntry={
+                onEditWord
+                  ? (payload: { pinyin: string; english: string }) =>
+                      onEditWord(vocab.id, payload)
+                  : undefined
+              }
+              isUpdating={updatingWordId === vocab.id}
+              onVerifyPinyin={
+                onVerifyWord ? () => onVerifyWord(vocab.id) : undefined
+              }
+              isVerifying={verifyingWordId === vocab.id}
+              verificationResult={verificationResults?.[vocab.id]}
             />
           ))}
         </Stack>

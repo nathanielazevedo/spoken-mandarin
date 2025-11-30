@@ -12,7 +12,6 @@ import {
   Typography,
   TextField,
 } from "@mui/material";
-import { UploadFile as UploadFileIcon } from "@mui/icons-material";
 
 export interface BulkUploadCounts {
   vocabulary: number;
@@ -105,12 +104,7 @@ export const BulkUploadDialog: React.FC<BulkUploadDialogProps> = ({
           alignItems={{ sm: "center" }}
           sx={{ mt: 3 }}
         >
-          <Button
-            variant="contained"
-            component="label"
-            startIcon={<UploadFileIcon />}
-            disabled={isUploading}
-          >
+          <Button variant="contained" component="label" disabled={isUploading}>
             {isUploading ? "Uploading..." : "Select JSON file"}
             <input
               type="file"

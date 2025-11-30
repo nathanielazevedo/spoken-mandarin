@@ -40,12 +40,21 @@ export async function GET(
     const transformed = {
       id: lesson.id,
       title: lesson.title,
-      vocabulary: lesson.vocabulary.map((v: { id: string; pinyin: string; english: string; audioUrl: string | null }) => ({
+      vocabulary: lesson.vocabulary.map(
+        (v: {
+          id: string;
+          pinyin: string;
+          english: string;
+          audioUrl: string | null;
+          hanzi?: string | null;
+        }) => ({
         id: v.id,
         pinyin: v.pinyin,
         english: v.english,
-        audioUrl: v.audioUrl,
-      })),
+          hanzi: v.hanzi ?? undefined,
+          audioUrl: v.audioUrl,
+        })
+      ),
       sentences: lesson.sentences.map((s: { id: string; pinyin: string; english: string; audioUrl: string | null }) => ({
         id: s.id,
         pinyin: s.pinyin,

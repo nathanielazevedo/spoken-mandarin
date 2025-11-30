@@ -1,31 +1,22 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
-  Card,
-  Typography,
-  IconButton,
-  TextField,
   Button,
-  LinearProgress,
+  Card,
   Chip,
-  Stack,
+  IconButton,
+  LinearProgress,
   Slider,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
 } from "@mui/material";
 import {
   Close as CloseIcon,
-  Refresh as RestartIcon,
-  TipsAndUpdates as HintIcon,
-  CheckCircle as CorrectIcon,
-  ErrorOutline as IncorrectIcon,
-  Timer as TimerIcon,
   Pause as PauseIcon,
   PlayArrow as PlayIcon,
+  RestartAlt as RestartIcon,
 } from "@mui/icons-material";
 import type { PracticeEntry } from "../types/lesson";
 import { normalizePinyin } from "../utils/pinyin";
@@ -33,136 +24,133 @@ import { normalizePinyin } from "../utils/pinyin";
 interface VocabularyPracticeProps {
   vocabulary: PracticeEntry[];
   onClose: () => void;
-  title?: string;
   itemLabel?: string;
   onEntryCompleted?: (entry: PracticeEntry, proceed: () => void) => void;
 }
 
-type PracticeMode = "perfect" | "narrow";
+const TIME_LIMIT_SECONDS = 15;
+const RETRY_SUCCESS_TARGET = 5;
+
+const clampIndexValue = (value: number, max: number): number => {
+  if (!max) {
+    return 0;
+  }
+  if (Number.isNaN(value) || value < 1) {
+    return 1;
+  }
+  if (value > max) {
+    return max;
+  }
+  return value;
+};
 
 export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   vocabulary,
   onClose,
-  title = "Vocabulary Practice",
   itemLabel = "words",
   onEntryCompleted,
 }) => {
-  const TIME_LIMIT_SECONDS = 15;
   const baseVocabulary = useMemo(() => vocabulary.slice(), [vocabulary]);
   const totalVocabularyCount = baseVocabulary.length;
-  const [mode, setMode] = useState<PracticeMode | null>(null);
+
+  const [rangeStart, setRangeStart] = useState(
+    totalVocabularyCount > 0 ? 1 : 0
+  );
+  const [rangeEnd, setRangeEnd] = useState(totalVocabularyCount || 0);
+
   const [activeVocabulary, setActiveVocabulary] = useState<PracticeEntry[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [userInput, setUserInput] = useState("");
-  const [result, setResult] = useState<"correct" | "incorrect" | null>(null);
-  const [revealed, setRevealed] = useState(false);
+  const [sessionTotal, setSessionTotal] = useState(0);
+  const [sessionRange, setSessionRange] = useState({ start: 0, end: 0 });
+  const [hasSessionStarted, setHasSessionStarted] = useState(false);
   const [completed, setCompleted] = useState(false);
+
+  const [userInput, setUserInput] = useState("");
+  const [revealed, setRevealed] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_SECONDS);
   const [timeUp, setTimeUp] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [failureReason, setFailureReason] = useState<
-    "time" | "input" | "reveal" | null
-  >(null);
   const [overallSeconds, setOverallSeconds] = useState(0);
   const [isOverallRunning, setIsOverallRunning] = useState(false);
-  const [narrowIncorrect, setNarrowIncorrect] = useState<PracticeEntry[]>([]);
-  const narrowIncorrectIdsRef = useRef<Set<string>>(new Set());
-  const [narrowRound, setNarrowRound] = useState(1);
-  const [rangeStart, setRangeStart] = useState(() =>
-    totalVocabularyCount > 0 ? 1 : 0
-  );
-  const [rangeEnd, setRangeEnd] = useState(() => totalVocabularyCount || 0);
-  const [sessionTotal, setSessionTotal] = useState(0);
-  const [sessionRange, setSessionRange] = useState<{
-    start: number;
-    end: number;
-  }>({ start: 0, end: 0 });
-  const [awaitingManualAdvance, setAwaitingManualAdvance] = useState(false);
+  const [retryMode, setRetryMode] = useState(false);
+  const [retrySuccessCount, setRetrySuccessCount] = useState(0);
 
-  const currentWord = activeVocabulary[currentIndex];
-  const progress = activeVocabulary.length
-    ? ((currentIndex + (completed ? 1 : 0)) / activeVocabulary.length) * 100
-    : 100;
-  const progressLabel = activeVocabulary.length
-    ? `${Math.min(currentIndex + 1, activeVocabulary.length)} / ${
-        activeVocabulary.length
-      }`
+  const currentWord = activeVocabulary[currentIndex] ?? null;
+  const progress = sessionTotal
+    ? ((currentIndex + (completed ? 1 : 0)) / sessionTotal) * 100
+    : 0;
+  const progressLabel = sessionTotal
+    ? `${Math.min(currentIndex + 1, sessionTotal)} / ${sessionTotal}`
     : "0 / 0";
-  const practicedCount = sessionTotal || baseVocabulary.length;
+  const selectedCount = useMemo(() => {
+    if (!totalVocabularyCount || rangeStart === 0 || rangeEnd === 0) {
+      return 0;
+    }
+    const start = Math.min(rangeStart, rangeEnd);
+    const end = Math.max(rangeStart, rangeEnd);
+    return Math.max(0, end - start + 1);
+  }, [rangeEnd, rangeStart, totalVocabularyCount]);
+  const practicedCount = sessionTotal;
+
+  const formattedOverallTime = useMemo(() => {
+    const minutes = Math.floor(overallSeconds / 60);
+    const seconds = overallSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  }, [overallSeconds]);
 
   const resetForCurrentWord = useCallback(() => {
     setUserInput("");
-    setResult(null);
     setRevealed(false);
     setTimeUp(false);
     setTimeLeft(TIME_LIMIT_SECONDS);
     setIsLocked(false);
-    setFailureReason(null);
-    setAwaitingManualAdvance(false);
+    setRetryMode(false);
+    setRetrySuccessCount(0);
   }, []);
 
-  const resetNarrowIncorrect = useCallback(() => {
-    narrowIncorrectIdsRef.current.clear();
-    setNarrowIncorrect([]);
-  }, []);
+  const startPractice = useCallback(() => {
+    if (!totalVocabularyCount) {
+      return;
+    }
 
-  const rememberNarrowIncorrect = useCallback((entry: PracticeEntry) => {
-    setNarrowIncorrect((prev) => {
-      if (narrowIncorrectIdsRef.current.has(entry.id)) {
-        return prev;
-      }
-      narrowIncorrectIdsRef.current.add(entry.id);
-      return [...prev, entry];
+    const startIdx = clampIndexValue(rangeStart, totalVocabularyCount) - 1;
+    const endIdx = clampIndexValue(rangeEnd, totalVocabularyCount) - 1;
+    const selectionStart = Math.min(startIdx, endIdx);
+    const selectionEnd = Math.max(startIdx, endIdx);
+    const selected = baseVocabulary.slice(selectionStart, selectionEnd + 1);
+
+    if (!selected.length) {
+      setActiveVocabulary([]);
+      setSessionTotal(0);
+      setSessionRange({ start: 0, end: 0 });
+      return;
+    }
+
+    setActiveVocabulary(selected);
+    setSessionTotal(selected.length);
+    setSessionRange({
+      start: selectionStart + 1,
+      end: selectionStart + selected.length,
     });
-  }, []);
-
-  const startMode = useCallback(
-    (selectedMode: PracticeMode) => {
-      const startIdx = totalVocabularyCount
-        ? Math.max(0, Math.min(rangeStart - 1, totalVocabularyCount - 1))
-        : 0;
-      const endIdx = totalVocabularyCount
-        ? Math.max(startIdx, Math.min(rangeEnd - 1, totalVocabularyCount - 1))
-        : 0;
-      const initialList =
-        totalVocabularyCount > 0 && rangeStart > 0 && rangeEnd > 0
-          ? baseVocabulary.slice(startIdx, endIdx + 1)
-          : [];
-      setMode(selectedMode);
-      setActiveVocabulary(initialList);
-      setCurrentIndex(0);
-      resetForCurrentWord();
-      setCompleted(initialList.length === 0);
-      setSessionTotal(initialList.length);
-      setSessionRange(
-        initialList.length
-          ? { start: startIdx + 1, end: startIdx + initialList.length }
-          : { start: 0, end: 0 }
-      );
-      setOverallSeconds(0);
-      setIsOverallRunning(initialList.length > 0);
-      setIsPaused(false);
-      setResult(null);
-      setTimeUp(false);
-      setIsLocked(false);
-      setFailureReason(null);
-      resetNarrowIncorrect();
-      setNarrowRound(1);
-      setAwaitingManualAdvance(false);
-    },
-    [
-      baseVocabulary,
-      rangeEnd,
-      rangeStart,
-      resetForCurrentWord,
-      resetNarrowIncorrect,
-      totalVocabularyCount,
-    ]
-  );
+    setCurrentIndex(0);
+    setHasSessionStarted(true);
+    setCompleted(false);
+    resetForCurrentWord();
+    setIsOverallRunning(true);
+    setIsPaused(false);
+    setRetryMode(false);
+    setRetrySuccessCount(0);
+  }, [
+    baseVocabulary,
+    rangeEnd,
+    rangeStart,
+    resetForCurrentWord,
+    totalVocabularyCount,
+  ]);
 
   const moveToNext = useCallback(() => {
-    if (!mode) {
+    if (!hasSessionStarted || completed) {
       return;
     }
 
@@ -173,33 +161,26 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
       return;
     }
 
-    if (mode === "narrow" && narrowIncorrect.length > 0) {
-      const nextRoundList = [...narrowIncorrect];
-      setActiveVocabulary(nextRoundList);
-      setCurrentIndex(0);
-      resetForCurrentWord();
-      setCompleted(false);
-      setNarrowRound((prev) => prev + 1);
-      resetNarrowIncorrect();
-      return;
-    }
-
     setCompleted(true);
-    setUserInput("");
-    setIsLocked(false);
-    setTimeUp(false);
     setIsOverallRunning(false);
+    setUserInput("");
   }, [
-    mode,
-    currentIndex,
     activeVocabulary.length,
-    narrowIncorrect,
+    completed,
+    currentIndex,
+    hasSessionStarted,
     resetForCurrentWord,
-    resetNarrowIncorrect,
   ]);
 
   const handleSubmit = () => {
-    if (!currentWord || !userInput.trim() || timeUp || isLocked || isPaused) {
+    if (
+      !currentWord ||
+      !userInput.trim() ||
+      timeUp ||
+      isLocked ||
+      isPaused ||
+      completed
+    ) {
       return;
     }
 
@@ -207,11 +188,32 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
       normalizePinyin(userInput) === normalizePinyin(currentWord.pinyin);
 
     if (!isCorrect) {
-      handleFailure("input");
+      handleFailure();
       return;
     }
 
-    setResult("correct");
+    if (retryMode) {
+      const nextCount = retrySuccessCount + 1;
+      setRevealed(false);
+      setRetrySuccessCount(nextCount);
+      setUserInput("");
+      setTimeLeft(TIME_LIMIT_SECONDS);
+      setTimeUp(false);
+      setIsLocked(false);
+      const handleAfterAudio = () => {
+        if (nextCount >= RETRY_SUCCESS_TARGET) {
+          setRetryMode(false);
+          startPractice();
+        }
+      };
+      if (onEntryCompleted) {
+        onEntryCompleted(currentWord, handleAfterAudio);
+      } else {
+        handleAfterAudio();
+      }
+      return;
+    }
+
     setRevealed(true);
 
     const proceed = () => {
@@ -227,114 +229,34 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     }
   };
 
-  const handleReveal = () => {
-    if (!currentWord || timeUp || isLocked || isPaused) {
-      return;
-    }
-    handleFailure("reveal");
-  };
-
   const handleRestart = useCallback(() => {
-    if (mode) {
-      startMode(mode);
-    } else {
-      setMode(null);
-    }
-    setIsPaused(false);
-  }, [mode, startMode]);
+    startPractice();
+  }, [startPractice]);
 
   const handlePauseToggle = useCallback(() => {
-    if (!mode || completed) {
+    if (!hasSessionStarted || completed) {
       return;
     }
     setIsPaused((prev) => {
       const next = !prev;
-      if (next) {
-        setIsOverallRunning(false);
-      } else if (!timeUp && !isLocked) {
-        setIsOverallRunning(true);
-      }
+      setIsOverallRunning(!next);
       return next;
     });
-  }, [mode, completed, timeUp, isLocked]);
+  }, [completed, hasSessionStarted]);
 
-  const handleFailure = useCallback(
-    (reason: "time" | "input" | "reveal") => {
-      if (!currentWord) {
-        return;
-      }
-      setResult("incorrect");
-      setRevealed(true);
-      setIsLocked(true);
-      setTimeUp(reason === "time");
-      setTimeLeft(0);
-      setFailureReason(reason);
-      setAwaitingManualAdvance(true);
-
-      if (mode === "narrow") {
-        rememberNarrowIncorrect(currentWord);
-      } else {
-        setIsOverallRunning(false);
-      }
-    },
-    [currentWord, mode, moveToNext, rememberNarrowIncorrect]
-  );
-
-  const handleContinueAfterFailure = useCallback(() => {
-    if (!mode || !awaitingManualAdvance) {
+  const handleFailure = useCallback(() => {
+    if (!hasSessionStarted || completed || !currentWord) {
       return;
     }
-
-    setAwaitingManualAdvance(false);
-
-    if (mode === "narrow") {
-      setIsLocked(false);
-      moveToNext();
-      return;
-    }
-  }, [mode, awaitingManualAdvance, moveToNext]);
-
-  const clampRangeValue = useCallback(
-    (value: number) => {
-      if (!totalVocabularyCount) {
-        return 0;
-      }
-      if (Number.isNaN(value) || value < 1) {
-        return 1;
-      }
-      if (value > totalVocabularyCount) {
-        return totalVocabularyCount;
-      }
-      return value;
-    },
-    [totalVocabularyCount]
-  );
-
-  useEffect(() => {
-    if (!totalVocabularyCount) {
-      setRangeStart(0);
-      setRangeEnd(0);
-      return;
-    }
-    setRangeStart((prev) => clampRangeValue(prev || 1));
-    setRangeEnd((prev) => clampRangeValue(prev || totalVocabularyCount));
-  }, [clampRangeValue, totalVocabularyCount]);
-
-  useEffect(() => {
-    if (!totalVocabularyCount) {
-      return;
-    }
-    if (rangeStart > rangeEnd) {
-      setRangeEnd(rangeStart);
-    }
-  }, [rangeEnd, rangeStart, totalVocabularyCount]);
-
-  const selectedCount = useMemo(() => {
-    if (!totalVocabularyCount || rangeStart === 0 || rangeEnd === 0) {
-      return 0;
-    }
-    return Math.max(0, rangeEnd - rangeStart + 1);
-  }, [rangeEnd, rangeStart, totalVocabularyCount]);
+    setRevealed(true);
+    setIsLocked(false);
+    setTimeUp(false);
+    setTimeLeft(TIME_LIMIT_SECONDS);
+    setRetryMode(true);
+    setRetrySuccessCount(0);
+    setUserInput("");
+    setIsOverallRunning(false);
+  }, [completed, currentWord, hasSessionStarted]);
 
   const handleRangeStartInputChange = useCallback(
     (value: number) => {
@@ -343,13 +265,13 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
         setRangeEnd(0);
         return;
       }
-      const clamped = clampRangeValue(value);
+      const clamped = clampIndexValue(value, totalVocabularyCount);
       setRangeStart(clamped);
       if (clamped > rangeEnd) {
         setRangeEnd(clamped);
       }
     },
-    [clampRangeValue, rangeEnd, totalVocabularyCount]
+    [rangeEnd, totalVocabularyCount]
   );
 
   const handleRangeEndInputChange = useCallback(
@@ -359,13 +281,13 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
         setRangeEnd(0);
         return;
       }
-      const clamped = clampRangeValue(value);
+      const clamped = clampIndexValue(value, totalVocabularyCount);
       setRangeEnd(clamped);
       if (clamped < rangeStart) {
         setRangeStart(clamped);
       }
     },
-    [clampRangeValue, rangeStart, totalVocabularyCount]
+    [rangeStart, totalVocabularyCount]
   );
 
   const handleRangeSliderChange = useCallback(
@@ -388,7 +310,14 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   };
 
   useEffect(() => {
-    if (!mode || completed || !currentWord || timeUp || isLocked || isPaused) {
+    if (
+      !hasSessionStarted ||
+      completed ||
+      !currentWord ||
+      timeUp ||
+      isLocked ||
+      isPaused
+    ) {
       return;
     }
 
@@ -396,7 +325,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
       setTimeLeft((prev) => {
         if (prev <= 1) {
           window.clearInterval(timerId);
-          handleFailure("time");
+          handleFailure();
           return 0;
         }
         return prev - 1;
@@ -406,154 +335,174 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     return () => {
       window.clearInterval(timerId);
     };
-  }, [mode, completed, currentWord, timeUp, isLocked, isPaused, handleFailure]);
+  }, [
+    completed,
+    currentWord,
+    handleFailure,
+    hasSessionStarted,
+    isLocked,
+    isPaused,
+    timeUp,
+  ]);
 
   useEffect(() => {
-    if (!mode || !isOverallRunning) {
+    if (!hasSessionStarted || !isOverallRunning || completed) {
       return;
     }
-    const overallTimerId = window.setInterval(() => {
+    const timerId = window.setInterval(() => {
       setOverallSeconds((prev) => prev + 1);
     }, 1000);
     return () => {
-      window.clearInterval(overallTimerId);
+      window.clearInterval(timerId);
     };
-  }, [mode, isOverallRunning]);
+  }, [completed, hasSessionStarted, isOverallRunning]);
 
-  const formattedOverallTime = useMemo(() => {
-    const minutes = Math.floor(overallSeconds / 60);
-    const seconds = overallSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  }, [overallSeconds]);
+  const sliderValue: [number, number] = totalVocabularyCount
+    ? [rangeStart || 1, rangeEnd || totalVocabularyCount]
+    : [0, 0];
 
-  const modeLabel =
-    mode === "perfect"
-      ? "Perfect mode"
-      : mode === "narrow"
-      ? `Narrow Down — Round ${narrowRound}`
-      : "Select mode";
+  const disableControls = !hasSessionStarted;
+  const timerChipColor =
+    timeLeft <= 5 && !isPaused ? "error" : isPaused ? "warning" : "default";
 
   return (
     <Box
       sx={{
         position: "fixed",
         inset: 0,
-        bgcolor: "rgba(0, 0, 0, 0.8)",
+        bgcolor: "rgba(0, 0, 0, 0.86)",
+        backdropFilter: "blur(2px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 1200,
-        p: 2,
+        zIndex: 1300,
+        p: { xs: 1, sm: 2 },
       }}
     >
       <Card
         sx={{
           width: "100%",
           maxWidth: 640,
-          maxHeight: "90vh",
+          maxHeight: "92vh",
           display: "flex",
           flexDirection: "column",
         }}
       >
-        <Box
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
           sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            p: 2,
-            borderBottom: "1px solid",
-            borderColor: "divider",
+            p: { xs: 1.5, sm: 2 },
+            gap: 1,
           }}
         >
-          <Stack spacing={0.5}>
-            <Typography variant="h6">{title}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {modeLabel}
-            </Typography>
-          </Stack>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            {mode && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <Tooltip title="Back to lesson">
+              <IconButton onClick={onClose} aria-label="Back to lesson">
+                <CloseIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={isPaused ? "Resume" : "Pause"}>
+              <span>
+                <IconButton
+                  onClick={handlePauseToggle}
+                  disabled={disableControls || completed}
+                  aria-label={isPaused ? "Resume practice" : "Pause practice"}
+                >
+                  {isPaused ? <PlayIcon /> : <PauseIcon />}
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Restart practice">
+              <span>
+                <IconButton
+                  onClick={handleRestart}
+                  disabled={disableControls}
+                  aria-label="Restart practice"
+                >
+                  <RestartIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
+          <Stack
+            direction="row"
+            spacing={1}
+            flexWrap="wrap"
+            justifyContent="flex-end"
+            sx={{
+              flex: 1,
+              minHeight: 40,
+              gap: 1,
+              alignItems: "center",
+            }}
+          >
+            {hasSessionStarted && retryMode ? (
+              <Chip
+                label={`Retry ${retrySuccessCount}/${RETRY_SUCCESS_TARGET}`}
+                color="warning"
+                variant="outlined"
+                size="small"
+              />
+            ) : (
               <>
-                <Chip
-                  label={`${
-                    itemLabel === "words" ? "Word" : "Item"
-                  } ${progressLabel}`}
-                  variant="outlined"
-                />
-                <Chip
-                  icon={<TimerIcon />}
-                  label={`Overall: ${formattedOverallTime}`}
-                  color={
-                    completed
-                      ? "success"
-                      : result === "incorrect" && mode === "perfect"
-                      ? "error"
-                      : "default"
-                  }
-                  variant={isOverallRunning ? "filled" : "outlined"}
-                />
-                {sessionTotal > 0 && (
+                {hasSessionStarted && !!sessionTotal && (
+                  <Chip label={progressLabel} variant="outlined" size="small" />
+                )}
+                {hasSessionStarted && (
                   <Chip
-                    label={`${sessionTotal} selected${
-                      sessionRange.start > 0 && sessionRange.end > 0
-                        ? ` (${sessionRange.start}-${sessionRange.end})`
-                        : ""
-                    }`}
-                    variant="outlined"
+                    label={formattedOverallTime}
+                    variant={completed ? "filled" : "outlined"}
+                    color={completed ? "success" : "default"}
+                    size="small"
                   />
                 )}
-                {mode === "narrow" && (
+                {hasSessionStarted && (
                   <Chip
-                    label={`Round ${narrowRound}`}
-                    color="primary"
+                    label={isPaused ? "Paused" : `${timeLeft}s`}
+                    color={timerChipColor}
                     variant="outlined"
+                    size="small"
                   />
                 )}
               </>
             )}
-            {mode && !completed && (
-              <IconButton onClick={handlePauseToggle} size="small">
-                {isPaused ? <PlayIcon /> : <PauseIcon />}
-              </IconButton>
-            )}
-            <IconButton onClick={handleRestart} size="small" disabled={!mode}>
-              <RestartIcon />
-            </IconButton>
-            <IconButton onClick={onClose} size="small">
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </Box>
-
-        {mode && (
-          <Box sx={{ px: 2, pt: 2 }}>
-            <LinearProgress variant="determinate" value={progress} />
-          </Box>
-        )}
+          </Stack>
+        </Stack>
+        <LinearProgress
+          variant="determinate"
+          value={hasSessionStarted && sessionTotal > 0 ? progress : 0}
+          sx={{
+            width: "100%",
+            height: 3,
+            borderRadius: 0,
+            flexShrink: 0,
+          }}
+        />
 
         <Box
           sx={{
-            p: 3,
+            p: { xs: 2, sm: 3 },
             flex: 1,
             display: "flex",
             flexDirection: "column",
-            alignItems: "center",
             justifyContent: "center",
             gap: 2,
-            textAlign: "center",
           }}
         >
-          {!mode ? (
-            <Stack spacing={3} sx={{ width: "100%", maxWidth: 420 }}>
-              <Typography variant="h5">Choose a practice mode</Typography>
+          {!hasSessionStarted && (
+            <Stack
+              spacing={2}
+              sx={{ width: "100%", maxWidth: 460, mx: "auto" }}
+            >
               {totalVocabularyCount > 0 ? (
-                <Stack spacing={2}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Select which {itemLabel} to include ({totalVocabularyCount}{" "}
-                    total)
+                <>
+                  <Typography variant="body2" color="text.secondary">
+                    Select the range of {itemLabel} to drill.
                   </Typography>
                   <Slider
-                    value={[rangeStart || 1, rangeEnd || 1]}
+                    value={sliderValue}
                     onChange={handleRangeSliderChange}
                     valueLabelDisplay="auto"
                     min={1}
@@ -561,7 +510,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                     step={1}
                     disabled={totalVocabularyCount <= 1}
                   />
-                  <Stack direction="row" spacing={2}>
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                     <TextField
                       type="number"
                       label="Start index"
@@ -583,207 +532,84 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                       fullWidth
                     />
                   </Stack>
-                  <Typography variant="body2" color="text.secondary">
-                    Practicing {selectedCount} of {totalVocabularyCount}{" "}
-                    {itemLabel}
-                  </Typography>
-                </Stack>
+                </>
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  Add {itemLabel} to start practicing.
+                  Add {itemLabel} to begin practicing.
                 </Typography>
               )}
               <Button
                 variant="contained"
                 size="large"
-                onClick={() => startMode("perfect")}
+                onClick={startPractice}
                 disabled={!selectedCount}
               >
-                Perfect mode (current behavior)
+                Start practice
               </Button>
-              <Typography variant="body2" color="text.secondary">
-                Perfect mode ends the session immediately when you make a
-                mistake, encouraging flawless runs.
-              </Typography>
-              <Button
-                variant="outlined"
-                size="large"
-                onClick={() => startMode("narrow")}
-                disabled={!selectedCount}
-              >
-                Narrow Down mode
-              </Button>
-              <Typography variant="body2" color="text.secondary">
-                Narrow Down lets you continue even after mistakes, looping back
-                through missed words until you finish a perfect round.
-              </Typography>
             </Stack>
-          ) : completed ? (
-            <Box>
-              <Typography variant="h5" color="success.main" gutterBottom>
-                Great work!
+          )}
+
+          {hasSessionStarted && completed && (
+            <Stack spacing={2} textAlign="center">
+              <Typography variant="h5" color="success.main">
+                Perfect run complete
               </Typography>
               <Typography color="text.secondary">
-                You practiced {practicedCount} {itemLabel}
+                You cleared {practicedCount} {itemLabel}
                 {sessionRange.start > 0 && sessionRange.end > 0
                   ? ` (range ${sessionRange.start}-${sessionRange.end})`
                   : ""}
-                {mode === "narrow" && narrowRound > 1
-                  ? ` in ${narrowRound} rounds`
-                  : ""}
-                {practicedCount > 0 ? ` in ${formattedOverallTime}` : ""}.
+                {practicedCount > 0 ? ` in ${formattedOverallTime}` : "."}
               </Typography>
-              <Button
-                variant="contained"
-                sx={{ mt: 3 }}
-                onClick={handleRestart}
-                startIcon={<RestartIcon />}
-              >
-                Practice Again
-              </Button>
-            </Box>
-          ) : currentWord ? (
-            <>
+            </Stack>
+          )}
+
+          {hasSessionStarted && !completed && currentWord && (
+            <Stack spacing={2}>
               {isPaused && (
                 <Chip
                   label="Practice paused"
                   color="warning"
                   variant="outlined"
-                  sx={{ mb: 1 }}
                 />
               )}
-              <Box
-                sx={{
-                  display: "flex",
-                  width: "100%",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Typography variant="overline" color="text.secondary">
-                  English meaning
-                </Typography>
-                <Chip
-                  label={isPaused ? "Paused" : `Time left: ${timeLeft}s`}
-                  color={
-                    isPaused ? "warning" : timeLeft <= 5 ? "error" : "default"
-                  }
-                  variant="outlined"
-                />
-              </Box>
-              <Typography variant="h4" gutterBottom>
+              <Typography variant="h4" textAlign="center">
                 {currentWord.english}
               </Typography>
-
               <Box
-                sx={{ minHeight: 48, display: "flex", alignItems: "center" }}
+                sx={{
+                  minHeight: 48,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
               >
                 {revealed && (
-                  <Chip
-                    icon={<HintIcon />}
-                    label={`Target: ${currentWord.pinyin}`}
-                    color="primary"
-                    variant="outlined"
-                  />
+                  <Typography variant="h4" textAlign="center" color="primary">
+                    {currentWord.pinyin}
+                  </Typography>
                 )}
               </Box>
-
               <TextField
                 fullWidth
                 autoFocus
                 label="Type the pinyin"
                 value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
+                onChange={(event) => setUserInput(event.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={timeUp || isLocked || isPaused}
               />
-
-              <Box sx={{ display: "flex", gap: 2 }}>
+              <Stack spacing={2}>
                 <Button
                   variant="contained"
                   onClick={handleSubmit}
                   disabled={!userInput.trim() || timeUp || isLocked || isPaused}
+                  fullWidth
                 >
-                  Check Answer
+                  Check answer
                 </Button>
-                <Button
-                  variant="text"
-                  onClick={handleReveal}
-                  startIcon={<HintIcon />}
-                  disabled={timeUp || isLocked || isPaused}
-                >
-                  Reveal pinyin
-                </Button>
-              </Box>
-
-              <Box
-                sx={{
-                  minHeight: 48,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                  flexWrap: "wrap",
-                  justifyContent: "center",
-                }}
-              >
-                {result === "correct" && (
-                  <Chip
-                    icon={<CorrectIcon />}
-                    label="Correct!"
-                    color="success"
-                  />
-                )}
-                {result === "incorrect" && mode === "perfect" && (
-                  <>
-                    <Chip
-                      icon={<IncorrectIcon />}
-                      label={
-                        failureReason === "time"
-                          ? "Time's up"
-                          : failureReason === "reveal"
-                          ? "Reveal used"
-                          : "Incorrect answer"
-                      }
-                      color="error"
-                    />
-                    <Button
-                      variant="contained"
-                      color="error"
-                      onClick={handleRestart}
-                      startIcon={<RestartIcon />}
-                    >
-                      Restart practice
-                    </Button>
-                  </>
-                )}
-                {result === "incorrect" && mode === "narrow" && (
-                  <Chip
-                    icon={<IncorrectIcon />}
-                    label={
-                      failureReason === "time"
-                        ? "Added to retry list (time's up)"
-                        : failureReason === "reveal"
-                        ? "Added to retry list (revealed)"
-                        : "Added to retry list"
-                    }
-                    color="warning"
-                  />
-                )}
-                {result === "incorrect" && awaitingManualAdvance && (
-                  <Button
-                    variant="contained"
-                    onClick={handleContinueAfterFailure}
-                    disabled={!mode}
-                  >
-                    Continue
-                  </Button>
-                )}
-              </Box>
-            </>
-          ) : (
-            <Typography color="text.secondary">
-              No {itemLabel} loaded.
-            </Typography>
+              </Stack>
+            </Stack>
           )}
         </Box>
       </Card>

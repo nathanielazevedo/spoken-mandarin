@@ -107,9 +107,32 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   const [generatingSentenceAudioId, setGeneratingSentenceAudioId] = useState<
     string | null
   >(null);
+  const [vocabularyAudioVoices, setVocabularyAudioVoices] = useState<
+    Record<string, string>
+  >({});
+  const [updatingVocabularyId, setUpdatingVocabularyId] = useState<
+    string | null
+  >(null);
+  const [verifyingVocabularyId, setVerifyingVocabularyId] = useState<
+    string | null
+  >(null);
+  const [generatingVocabularyHanziId, setGeneratingVocabularyHanziId] =
+    useState<string | null>(null);
+  const [vocabularyVerificationResults, setVocabularyVerificationResults] =
+    useState<
+      Record<
+        string,
+        {
+          status: "success" | "error";
+          message: string | null;
+        }
+      >
+    >({});
   const [isGeneratingAllVocabularyAudio, setIsGeneratingAllVocabularyAudio] =
     useState(false);
   const [isGeneratingAllSentenceAudio, setIsGeneratingAllSentenceAudio] =
+    useState(false);
+  const [isGeneratingAllVocabularyHanzi, setIsGeneratingAllVocabularyHanzi] =
     useState(false);
 
   const [isSavingVocabularyOrder, setIsSavingVocabularyOrder] = useState(false);
@@ -162,6 +185,9 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   const sentenceCount = sentences.length;
   const missingVocabularyAudioCount = useMemo(() => {
     return vocabularyList.filter((entry) => !entry.audioUrl).length;
+  }, [vocabularyList]);
+  const missingVocabularyHanziCount = useMemo(() => {
+    return vocabularyList.filter((entry) => !entry.hanzi?.trim()).length;
   }, [vocabularyList]);
   const missingSentenceAudioCount = useMemo(() => {
     return sentences.filter((entry) => !entry.audioUrl).length;
@@ -417,6 +443,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
         setSentenceGenerationErrors((prev) => omitKey(prev, vocabId));
         setGeneratingSentenceIds((prev) => omitKey(prev, vocabId));
         setSavingSentenceIds((prev) => omitKey(prev, vocabId));
+        setVocabularyAudioVoices((prev) => omitKey(prev, vocabId));
       } catch (err) {
         console.error("Failed to delete vocabulary", err);
         setActionError((err as Error).message || "Failed to delete word");
@@ -445,6 +472,8 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
         }
 
         const data = await response.json();
+        const normalizedVoice =
+          typeof data.voice === "string" ? data.voice.trim() : "";
         setLesson((prev) => {
           if (!prev) return prev;
           return {
@@ -456,11 +485,218 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
             ),
           };
         });
+        setVocabularyAudioVoices((prev) =>
+          normalizedVoice
+            ? { ...prev, [vocabId]: normalizedVoice }
+            : omitKey(prev, vocabId)
+        );
       } catch (err) {
         console.error("Failed to generate audio", err);
         setActionError((err as Error).message || "Failed to generate audio");
       } finally {
         setGeneratingVocabularyAudioId(null);
+      }
+    },
+    [ensureEditable]
+  );
+
+  const handleUpdateVocabulary = useCallback(
+    async (vocabId: string, payload: { pinyin: string; english: string }) => {
+      if (!ensureEditable()) {
+        return;
+      }
+
+      const pinyin = payload.pinyin.trim();
+      const english = payload.english.trim();
+
+      if (!pinyin || !english) {
+        setActionError("Please provide both pinyin and English");
+        return;
+      }
+
+      setActionError(null);
+      setUpdatingVocabularyId(vocabId);
+
+      try {
+        const response = await fetch(`/api/vocabulary/${vocabId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pinyin, english }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to update vocabulary");
+        }
+
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            vocabulary: prev.vocabulary.map((entry) =>
+              entry.id === vocabId ? { ...entry, pinyin, english } : entry
+            ),
+          };
+        });
+      } catch (err) {
+        console.error("Failed to update vocabulary", err);
+        setActionError((err as Error).message || "Failed to update vocabulary");
+      } finally {
+        setUpdatingVocabularyId(null);
+      }
+    },
+    [ensureEditable]
+  );
+
+  const handleGenerateVocabularyHanzi = useCallback(
+    async (vocabId: string) => {
+      if (!ensureEditable()) {
+        return;
+      }
+
+      setActionError(null);
+      setGeneratingVocabularyHanziId(vocabId);
+
+      try {
+        const response = await fetch(`/api/vocabulary/${vocabId}/hanzi`, {
+          method: "POST",
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to generate hanzi");
+        }
+
+        const data = await response.json().catch(() => ({}));
+        const hanzi = typeof data.hanzi === "string" ? data.hanzi.trim() : "";
+
+        if (!hanzi) {
+          throw new Error("Missing hanzi in response");
+        }
+
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            vocabulary: prev.vocabulary.map((entry) =>
+              entry.id === vocabId ? { ...entry, hanzi } : entry
+            ),
+          };
+        });
+      } catch (err) {
+        console.error("Failed to generate vocabulary hanzi", err);
+        setActionError(
+          (err as Error).message || "Failed to generate vocabulary hanzi"
+        );
+      } finally {
+        setGeneratingVocabularyHanziId(null);
+      }
+    },
+    [ensureEditable]
+  );
+
+  const handleVerifyVocabularyPinyin = useCallback(
+    async (vocabId: string) => {
+      if (!ensureEditable()) {
+        return;
+      }
+
+      setActionError(null);
+      setVerifyingVocabularyId(vocabId);
+      setVocabularyVerificationResults((prev) => {
+        const next = { ...prev };
+        delete next[vocabId];
+        return next;
+      });
+
+      try {
+        const response = await fetch(
+          `/api/vocabulary/${vocabId}/verify-pinyin`,
+          {
+            method: "POST",
+          }
+        );
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to verify pinyin");
+        }
+
+        const data = await response.json().catch(() => ({}));
+        const correctedPinyin =
+          typeof data.pinyin === "string" ? data.pinyin.trim() : "";
+        const correctedHanzi =
+          typeof data.hanzi === "string" ? data.hanzi.trim() : "";
+
+        if (!correctedPinyin || !correctedHanzi) {
+          throw new Error("Missing pinyin or hanzi in verification response");
+        }
+
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            vocabulary: prev.vocabulary.map((entry) =>
+              entry.id === vocabId
+                ? { ...entry, pinyin: correctedPinyin, hanzi: correctedHanzi }
+                : entry
+            ),
+          };
+        });
+
+        const previousPinyin =
+          typeof data.previousPinyin === "string"
+            ? data.previousPinyin.trim()
+            : null;
+        const previousHanzi =
+          typeof data.previousHanzi === "string"
+            ? data.previousHanzi.trim()
+            : null;
+
+        const pinyinChanged =
+          Boolean(previousPinyin) && previousPinyin !== correctedPinyin;
+        const hanziChanged =
+          Boolean(previousHanzi) && previousHanzi !== correctedHanzi;
+
+        const fallbackNote = (() => {
+          const previousPinyinLabel = previousPinyin ?? "previous";
+          if (pinyinChanged && hanziChanged) {
+            return `Pinyin ${previousPinyinLabel} → ${correctedPinyin}; hanzi updated`;
+          }
+          if (pinyinChanged) {
+            return `Updated pinyin from ${previousPinyinLabel} to ${correctedPinyin}`;
+          }
+          if (hanziChanged) {
+            return "Hanzi updated";
+          }
+          return "Pinyin & hanzi verified";
+        })();
+
+        const noteText =
+          typeof data.notes === "string" && data.notes.trim().length
+            ? data.notes.trim()
+            : fallbackNote;
+
+        setVocabularyVerificationResults((prev) => ({
+          ...prev,
+          [vocabId]: { status: "success", message: noteText },
+        }));
+      } catch (err) {
+        console.error("Failed to verify vocabulary pinyin", err);
+        setActionError(
+          (err as Error).message || "Failed to verify vocabulary pinyin"
+        );
+        setVocabularyVerificationResults((prev) => ({
+          ...prev,
+          [vocabId]: {
+            status: "error",
+            message: (err as Error).message || "Verification failed",
+          },
+        }));
+      } finally {
+        setVerifyingVocabularyId(null);
       }
     },
     [ensureEditable]
@@ -504,6 +740,30 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
     },
     [ensureEditable]
   );
+
+  const handleGenerateMissingVocabularyHanzi = useCallback(async () => {
+    const missingEntries = vocabularyList.filter(
+      (entry) => !entry.hanzi?.trim()
+    );
+    if (!missingEntries.length) {
+      return;
+    }
+
+    if (!ensureEditable()) {
+      return;
+    }
+
+    setActionError(null);
+    setIsGeneratingAllVocabularyHanzi(true);
+
+    try {
+      for (const entry of missingEntries) {
+        await handleGenerateVocabularyHanzi(entry.id);
+      }
+    } finally {
+      setIsGeneratingAllVocabularyHanzi(false);
+    }
+  }, [ensureEditable, handleGenerateVocabularyHanzi, vocabularyList]);
 
   const handleGenerateMissingVocabularyAudio = useCallback(async () => {
     const missingEntries = vocabularyList.filter((entry) => !entry.audioUrl);
@@ -819,6 +1079,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
             id: createdWord.id,
             pinyin: createdWord.pinyin,
             english: createdWord.english,
+            hanzi: createdWord.hanzi ?? null,
             audioUrl: createdWord.audioUrl ?? null,
           });
           return {
@@ -1619,6 +1880,27 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
     );
   }
 
+  if (showVocabularyPractice) {
+    return (
+      <VocabularyPractice
+        vocabulary={lesson.vocabulary}
+        onClose={() => setShowVocabularyPractice(false)}
+        onEntryCompleted={handlePracticeEntryCompleted}
+      />
+    );
+  }
+
+  if (showSentencePractice) {
+    return (
+      <VocabularyPractice
+        vocabulary={sentences}
+        itemLabel="sentences"
+        onClose={() => setShowSentencePractice(false)}
+        onEntryCompleted={handlePracticeEntryCompleted}
+      />
+    );
+  }
+
   return (
     <Box
       sx={{
@@ -1632,9 +1914,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
       <Box sx={{ maxWidth: 1100, mx: "auto", width: "100%" }}>
         <LessonHero
           title={lesson.title}
-          description={`Master ${lesson.vocabulary.length} essential words and practice ${sentenceCount} real sentences.`}
-          vocabularyCount={lesson.vocabulary.length}
-          sentenceCount={sentenceCount}
+          description={``}
           onBackClick={handleBackClick}
           onBulkUploadClick={
             canEditLesson ? handleOpenBulkUploadDialog : undefined
@@ -1683,10 +1963,19 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
           onGenerateMissingAudio={
             canEditLesson ? handleGenerateMissingVocabularyAudio : undefined
           }
+          missingHanziCount={missingVocabularyHanziCount}
+          isGeneratingMissingHanzi={isGeneratingAllVocabularyHanzi}
+          onGenerateMissingHanzi={
+            canEditLesson ? handleGenerateMissingVocabularyHanzi : undefined
+          }
+          audioVoices={vocabularyAudioVoices}
           onPlayWord={handlePlayWord}
           onDeleteWord={canEditLesson ? handleDeleteVocabulary : undefined}
           onRegenerateAudio={
             canEditLesson ? handleGenerateVocabularyAudio : undefined
+          }
+          onGenerateHanzi={
+            canEditLesson ? handleGenerateVocabularyHanzi : undefined
           }
           onMoveWordToEnd={
             canEditLesson ? handleMoveVocabularyToEnd : undefined
@@ -1694,6 +1983,14 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
           onChangeWordOrder={
             canEditLesson ? handleChangeVocabularyOrderPosition : undefined
           }
+          onEditWord={canEditLesson ? handleUpdateVocabulary : undefined}
+          onVerifyWord={
+            canEditLesson ? handleVerifyVocabularyPinyin : undefined
+          }
+          updatingWordId={updatingVocabularyId}
+          verifyingWordId={verifyingVocabularyId}
+          verificationResults={vocabularyVerificationResults}
+          generatingHanziId={generatingVocabularyHanziId}
           reorderingEnabled={canEditLesson}
         />
 
@@ -1776,24 +2073,6 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
             vocabulary={sentences}
             title="Sentence Flashcards"
             onClose={() => setShowSentenceFlashcards(false)}
-          />
-        )}
-
-        {showVocabularyPractice && (
-          <VocabularyPractice
-            vocabulary={lesson.vocabulary}
-            onClose={() => setShowVocabularyPractice(false)}
-            onEntryCompleted={handlePracticeEntryCompleted}
-          />
-        )}
-
-        {showSentencePractice && (
-          <VocabularyPractice
-            vocabulary={sentences}
-            title="Sentence Practice"
-            itemLabel="sentences"
-            onClose={() => setShowSentencePractice(false)}
-            onEntryCompleted={handlePracticeEntryCompleted}
           />
         )}
       </Box>

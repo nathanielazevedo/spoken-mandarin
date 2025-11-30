@@ -4,18 +4,11 @@ import {
   Card,
   CardContent,
   Typography,
-  IconButton,
   Button,
   LinearProgress,
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
-import {
-  NavigateNext as NextIcon,
-  NavigateBefore as PrevIcon,
-  Close as CloseIcon,
-  Refresh as RefreshIcon,
-} from "@mui/icons-material";
 import type { PracticeEntry } from "../types/lesson";
 
 interface FlashcardsProps {
@@ -167,13 +160,23 @@ export const Flashcards: React.FC<FlashcardsProps> = ({
               <ToggleButton value="pinyin">Pinyin first</ToggleButton>
               <ToggleButton value="english">English first</ToggleButton>
             </ToggleButtonGroup>
-            <Box>
-              <IconButton onClick={handleReset} sx={{ color: "white" }}>
-                <RefreshIcon />
-              </IconButton>
-              <IconButton onClick={onClose} sx={{ color: "white" }}>
-                <CloseIcon />
-              </IconButton>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleReset}
+                sx={{ color: "white", borderColor: "rgba(255,255,255,0.3)" }}
+              >
+                Reset deck
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={onClose}
+                sx={{ color: "white", borderColor: "rgba(255,255,255,0.3)" }}
+              >
+                Close
+              </Button>
             </Box>
           </Box>
         </Box>
@@ -256,19 +259,22 @@ export const Flashcards: React.FC<FlashcardsProps> = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: 1,
+            flexWrap: "wrap",
           }}
         >
-          <IconButton
+          <Button
+            variant="outlined"
             onClick={handlePrev}
             disabled={vocabulary.length <= 1}
             sx={{
               color: "white",
-              bgcolor: "rgba(255, 255, 255, 0.1)",
-              "&:hover": { bgcolor: "rgba(255, 255, 255, 0.2)" },
+              borderColor: "rgba(255, 255, 255, 0.3)",
+              "&:hover": { borderColor: "white" },
             }}
           >
-            <PrevIcon />
-          </IconButton>
+            Previous card
+          </Button>
 
           <Button
             variant="outlined"
@@ -284,17 +290,18 @@ export const Flashcards: React.FC<FlashcardsProps> = ({
               : `Show ${isFrontPinyin ? "English" : "Pinyin"}`}
           </Button>
 
-          <IconButton
+          <Button
+            variant="outlined"
             onClick={handleNext}
             disabled={vocabulary.length <= 1}
             sx={{
               color: "white",
-              bgcolor: "rgba(255, 255, 255, 0.1)",
-              "&:hover": { bgcolor: "rgba(255, 255, 255, 0.2)" },
+              borderColor: "rgba(255, 255, 255, 0.3)",
+              "&:hover": { borderColor: "white" },
             }}
           >
-            <NextIcon />
-          </IconButton>
+            Next card
+          </Button>
         </Box>
       </Box>
     </Box>

@@ -6,11 +6,8 @@ import {
   Typography,
   Box,
   LinearProgress,
+  Chip,
 } from "@mui/material";
-import {
-  School as SchoolIcon,
-  CheckCircle as CompletedIcon,
-} from "@mui/icons-material";
 interface LessonSummary {
   id: string;
   title: string;
@@ -45,42 +42,17 @@ export const LessonCard: React.FC<LessonCardProps> = ({
     >
       <CardActionArea
         onClick={() => onClick(lesson.id)}
-        sx={{
-          height: "100%",
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          alignItems: "stretch",
-          p: 0,
-        }}
+        sx={{ height: "100%" }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minWidth: { xs: "auto", sm: 120 },
-            minHeight: { xs: 80, sm: "auto" },
-            bgcolor: "rgba(16, 163, 127, 0.1)",
-            borderRadius: { xs: "8px 8px 0 0", sm: "8px 0 0 8px" },
-          }}
-        >
-          <SchoolIcon
-            sx={{ fontSize: { xs: 32, sm: 40 }, color: "primary.main" }}
-          />
+        <CardContent sx={{ flexGrow: 1, p: { xs: 2, sm: 3 }, width: "100%" }}>
           {isCompleted && (
-            <CompletedIcon
-              sx={{
-                color: "success.main",
-                fontSize: 20,
-                position: "absolute",
-                top: 8,
-                right: 8,
-              }}
+            <Chip
+              label="Completed"
+              color="success"
+              size="small"
+              sx={{ mb: 1, alignSelf: "flex-start" }}
             />
           )}
-        </Box>
-
-        <CardContent sx={{ flexGrow: 1, p: { xs: 2, sm: 3 }, width: "100%" }}>
           <Box
             sx={{
               display: "flex",
@@ -101,17 +73,6 @@ export const LessonCard: React.FC<LessonCardProps> = ({
                 }}
               >
                 <Typography variant="h5" fontWeight={600} sx={{ minWidth: 0 }}>
-                  {lesson.title}
-                </Typography>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    color: "text.secondary",
-                    fontSize: "1rem",
-                    fontWeight: 400,
-                    flexShrink: 0,
-                  }}
-                >
                   {lesson.title}
                 </Typography>
               </Box>

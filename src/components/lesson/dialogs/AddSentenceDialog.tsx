@@ -12,10 +12,6 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import {
-  AddCircleOutline as AddIcon,
-  Translate as TranslateIcon,
-} from "@mui/icons-material";
 import type { PracticeEntry } from "../../../types/lesson";
 
 export interface AddSentenceDialogProps {
@@ -171,16 +167,13 @@ export const AddSentenceDialog: React.FC<AddSentenceDialogProps> = ({
             >
               <Button
                 variant="outlined"
-                startIcon={
-                  isTranslating ? (
-                    <CircularProgress size={18} color="inherit" thickness={5} />
-                  ) : (
-                    <TranslateIcon />
-                  )
-                }
                 onClick={handleRequestAiTranslation}
                 disabled={isTranslating || !english.trim().length}
+                sx={{ display: "flex", gap: 1, alignItems: "center" }}
               >
+                {isTranslating && (
+                  <CircularProgress size={18} color="inherit" thickness={5} />
+                )}
                 {isTranslating ? "Working..." : "Natural Mandarin (AI)"}
               </Button>
               {translationError && (
@@ -221,14 +214,11 @@ export const AddSentenceDialog: React.FC<AddSentenceDialogProps> = ({
             type="submit"
             variant="contained"
             disabled={isSubmitDisabled}
-            startIcon={
-              isSubmitting ? (
-                <CircularProgress size={18} color="inherit" thickness={5} />
-              ) : (
-                <AddIcon />
-              )
-            }
+            sx={{ display: "flex", gap: 1, alignItems: "center" }}
           >
+            {isSubmitting && (
+              <CircularProgress size={18} color="inherit" thickness={5} />
+            )}
             {isSubmitting ? "Adding..." : "Add sentence"}
           </Button>
         </DialogActions>

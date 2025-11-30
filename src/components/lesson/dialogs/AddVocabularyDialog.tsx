@@ -12,10 +12,6 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import {
-  AddCircleOutline as AddIcon,
-  AutoAwesome as AutoAwesomeIcon,
-} from "@mui/icons-material";
 import type { PracticeEntry } from "../../../types/lesson";
 
 export interface AddVocabularyDialogProps {
@@ -189,16 +185,13 @@ export const AddVocabularyDialog: React.FC<AddVocabularyDialogProps> = ({
             <Stack direction="row" spacing={1} alignItems="center">
               <Button
                 variant="outlined"
-                startIcon={
-                  isGeneratingAiSuggestion ? (
-                    <CircularProgress size={18} color="inherit" thickness={5} />
-                  ) : (
-                    <AutoAwesomeIcon />
-                  )
-                }
                 onClick={handleAiSuggestion}
                 disabled={aiButtonDisabled}
+                sx={{ display: "flex", gap: 1, alignItems: "center" }}
               >
+                {isGeneratingAiSuggestion && (
+                  <CircularProgress size={18} color="inherit" thickness={5} />
+                )}
                 {aiButtonLabel}
               </Button>
               {aiSuggestionError && (
@@ -234,14 +227,11 @@ export const AddVocabularyDialog: React.FC<AddVocabularyDialogProps> = ({
             type="submit"
             variant="contained"
             disabled={isSubmitDisabled}
-            startIcon={
-              isSubmitting ? (
-                <CircularProgress size={18} color="inherit" thickness={5} />
-              ) : (
-                <AddIcon />
-              )
-            }
+            sx={{ display: "flex", gap: 1, alignItems: "center" }}
           >
+            {isSubmitting && (
+              <CircularProgress size={18} color="inherit" thickness={5} />
+            )}
             {isSubmitting ? "Adding..." : "Add word"}
           </Button>
         </DialogActions>

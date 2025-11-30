@@ -57,6 +57,7 @@ export async function POST(request: Request) {
       id: vocabulary.id,
       pinyin: vocabulary.pinyin,
       english: vocabulary.english,
+      hanzi: vocabulary.hanzi ?? undefined,
       audioUrl: vocabulary.audioUrl ?? undefined,
     });
   } catch (error) {
