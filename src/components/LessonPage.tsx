@@ -74,7 +74,7 @@ export interface LessonPageProps {
 export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
