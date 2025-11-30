@@ -377,13 +377,9 @@ const VocabularyListContent: React.FC<VocabularyListContentProps> = ({
               isActive={currentAudioId === vocab.id}
               isDeleting={deletingWordId === vocab.id}
               isGeneratingAudio={generatingAudioId === vocab.id}
-              dragDisabled={
-                isFiltering || baseDragDisabled
-              }
+              dragDisabled={isFiltering || baseDragDisabled}
               onPlay={() => onPlayWord(vocab.id)}
-              onDelete={
-                onDeleteWord ? () => onDeleteWord(vocab.id) : undefined
-              }
+              onDelete={onDeleteWord ? () => onDeleteWord(vocab.id) : undefined}
               onRegenerateAudio={
                 onRegenerateAudio
                   ? () => onRegenerateAudio(vocab.id)

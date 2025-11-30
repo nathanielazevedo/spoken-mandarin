@@ -170,16 +170,20 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   const canEditLesson = useMemo(() => {
     const globalProcess =
       typeof globalThis !== "undefined"
-        ? (globalThis as {
-            process?: { env?: Record<string, string | undefined> };
-          }).process
+        ? (
+            globalThis as {
+              process?: { env?: Record<string, string | undefined> };
+            }
+          ).process
         : undefined;
 
     const isDevBuild =
       (typeof import.meta !== "undefined" &&
-        (import.meta as ImportMeta & {
-          env?: { DEV?: boolean };
-        }).env?.DEV) ||
+        (
+          import.meta as ImportMeta & {
+            env?: { DEV?: boolean };
+          }
+        ).env?.DEV) ||
       (globalProcess?.env?.NODE_ENV &&
         globalProcess.env.NODE_ENV !== "production");
 
@@ -420,74 +424,82 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
     setIsBulkUploadDialogOpen(false);
   }, [isBulkUploading]);
 
-  const handleDeleteVocabulary = useCallback(async (vocabId: string) => {
-    if (!ensureEditable()) {
-      return;
-    }
-    setActionError(null);
-    setDeletingWordId(vocabId);
-    try {
-      const response = await fetch(`/api/vocabulary/${vocabId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to delete word");
+  const handleDeleteVocabulary = useCallback(
+    async (vocabId: string) => {
+      if (!ensureEditable()) {
+        return;
       }
+      setActionError(null);
+      setDeletingWordId(vocabId);
+      try {
+        const response = await fetch(`/api/vocabulary/${vocabId}`, {
+          method: "DELETE",
+        });
 
-      setLesson((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          vocabulary: prev.vocabulary.filter((v) => v.id !== vocabId),
-        };
-      });
-      setGeneratedSentenceSuggestions((prev) => omitKey(prev, vocabId));
-      setSentenceGenerationErrors((prev) => omitKey(prev, vocabId));
-      setGeneratingSentenceIds((prev) => omitKey(prev, vocabId));
-      setSavingSentenceIds((prev) => omitKey(prev, vocabId));
-    } catch (err) {
-      console.error("Failed to delete vocabulary", err);
-      setActionError((err as Error).message || "Failed to delete word");
-    } finally {
-      setDeletingWordId(null);
-    }
-  }, [ensureEditable]);
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to delete word");
+        }
 
-  const handleGenerateVocabularyAudio = useCallback(async (vocabId: string) => {
-    if (!ensureEditable()) {
-      return;
-    }
-    setActionError(null);
-    setGeneratingVocabularyAudioId(vocabId);
-    try {
-      const response = await fetch(`/api/vocabulary/${vocabId}/audio`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to generate audio");
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            vocabulary: prev.vocabulary.filter((v) => v.id !== vocabId),
+          };
+        });
+        setGeneratedSentenceSuggestions((prev) => omitKey(prev, vocabId));
+        setSentenceGenerationErrors((prev) => omitKey(prev, vocabId));
+        setGeneratingSentenceIds((prev) => omitKey(prev, vocabId));
+        setSavingSentenceIds((prev) => omitKey(prev, vocabId));
+      } catch (err) {
+        console.error("Failed to delete vocabulary", err);
+        setActionError((err as Error).message || "Failed to delete word");
+      } finally {
+        setDeletingWordId(null);
       }
+    },
+    [ensureEditable]
+  );
 
-      const data = await response.json();
-      setLesson((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          vocabulary: prev.vocabulary.map((vocab) =>
-            vocab.id === vocabId ? { ...vocab, audioUrl: data.audioUrl } : vocab
-          ),
-        };
-      });
-    } catch (err) {
-      console.error("Failed to generate audio", err);
-      setActionError((err as Error).message || "Failed to generate audio");
-    } finally {
-      setGeneratingVocabularyAudioId(null);
-    }
-  }, [ensureEditable]);
+  const handleGenerateVocabularyAudio = useCallback(
+    async (vocabId: string) => {
+      if (!ensureEditable()) {
+        return;
+      }
+      setActionError(null);
+      setGeneratingVocabularyAudioId(vocabId);
+      try {
+        const response = await fetch(`/api/vocabulary/${vocabId}/audio`, {
+          method: "POST",
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to generate audio");
+        }
+
+        const data = await response.json();
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            vocabulary: prev.vocabulary.map((vocab) =>
+              vocab.id === vocabId
+                ? { ...vocab, audioUrl: data.audioUrl }
+                : vocab
+            ),
+          };
+        });
+      } catch (err) {
+        console.error("Failed to generate audio", err);
+        setActionError((err as Error).message || "Failed to generate audio");
+      } finally {
+        setGeneratingVocabularyAudioId(null);
+      }
+    },
+    [ensureEditable]
+  );
 
   const handleGenerateSentenceAudio = useCallback(
     async (sentenceId: string) => {
@@ -572,38 +584,41 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
     }
   }, [ensureEditable, handleGenerateSentenceAudio, sentences]);
 
-  const handleDeleteSentence = useCallback(async (sentenceId: string) => {
-    if (!ensureEditable()) {
-      return;
-    }
-    setActionError(null);
-    setDeletingSentenceId(sentenceId);
-    try {
-      const response = await fetch(`/api/sentences/${sentenceId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to delete sentence");
+  const handleDeleteSentence = useCallback(
+    async (sentenceId: string) => {
+      if (!ensureEditable()) {
+        return;
       }
+      setActionError(null);
+      setDeletingSentenceId(sentenceId);
+      try {
+        const response = await fetch(`/api/sentences/${sentenceId}`, {
+          method: "DELETE",
+        });
 
-      setLesson((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          sentences: prev.sentences.filter(
-            (sentence) => sentence.id !== sentenceId
-          ),
-        };
-      });
-    } catch (err) {
-      console.error("Failed to delete sentence", err);
-      setActionError((err as Error).message || "Failed to delete sentence");
-    } finally {
-      setDeletingSentenceId(null);
-    }
-  }, [ensureEditable]);
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to delete sentence");
+        }
+
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            sentences: prev.sentences.filter(
+              (sentence) => sentence.id !== sentenceId
+            ),
+          };
+        });
+      } catch (err) {
+        console.error("Failed to delete sentence", err);
+        setActionError((err as Error).message || "Failed to delete sentence");
+      } finally {
+        setDeletingSentenceId(null);
+      }
+    },
+    [ensureEditable]
+  );
 
   const revertVocabularyOrder = useCallback((previousOrderIds: string[]) => {
     setLesson((prev) => {
@@ -1742,9 +1757,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
             canEditLesson ? handleGenerateMissingSentenceAudio : undefined
           }
           onPlaySentence={handlePlaySentence}
-          onDeleteSentence={
-            canEditLesson ? handleDeleteSentence : undefined
-          }
+          onDeleteSentence={canEditLesson ? handleDeleteSentence : undefined}
           onRegenerateAudio={
             canEditLesson ? handleGenerateSentenceAudio : undefined
           }

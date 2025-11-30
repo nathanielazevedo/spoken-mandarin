@@ -156,9 +156,7 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
                 isDeleting={deletingSentenceId === sentence.id}
                 isGeneratingAudio={generatingSentenceAudioId === sentence.id}
                 dragDisabled={
-                  !reorderingEnabled ||
-                  isSavingOrder ||
-                  sentences.length <= 1
+                  !reorderingEnabled || isSavingOrder || sentences.length <= 1
                 }
                 onPlay={() => onPlaySentence(sentence.id)}
                 onDelete={
