@@ -7,7 +7,9 @@ import {
   Box,
   LinearProgress,
   Chip,
+  Tooltip,
 } from "@mui/material";
+import CloudDoneRoundedIcon from "@mui/icons-material/CloudDoneRounded";
 interface LessonSummary {
   id: string;
   title: string;
@@ -19,6 +21,8 @@ interface LessonCardProps {
   onClick: (lessonId: string) => void;
   isCompleted?: boolean;
   progress?: number;
+  isCached?: boolean;
+  cachedAt?: number;
 }
 
 export const LessonCard: React.FC<LessonCardProps> = ({
@@ -26,6 +30,8 @@ export const LessonCard: React.FC<LessonCardProps> = ({
   onClick,
   isCompleted = false,
   progress = 0,
+  isCached = false,
+  cachedAt,
 }) => {
   return (
     <Card
@@ -45,14 +51,41 @@ export const LessonCard: React.FC<LessonCardProps> = ({
         sx={{ height: "100%" }}
       >
         <CardContent sx={{ flexGrow: 1, p: { xs: 2, sm: 3 }, width: "100%" }}>
-          {isCompleted && (
-            <Chip
-              label="Completed"
-              color="success"
-              size="small"
-              sx={{ mb: 1, alignSelf: "flex-start" }}
-            />
-          )}
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 1,
+              mb: isCompleted || isCached ? 1 : 0,
+            }}
+          >
+            {isCompleted && (
+              <Chip
+                label="Completed"
+                color="success"
+                size="small"
+                sx={{ alignSelf: "flex-start" }}
+              />
+            )}
+            {isCached && (
+              <Tooltip
+                title={
+                  cachedAt
+                    ? `Cached ${new Date(cachedAt).toLocaleString()}`
+                    : "Cached for offline use"
+                }
+              >
+                <Chip
+                  label="Offline ready"
+                  color="primary"
+                  variant="outlined"
+                  icon={<CloudDoneRoundedIcon fontSize="small" />}
+                  size="small"
+                  sx={{ alignSelf: "flex-start" }}
+                />
+              </Tooltip>
+            )}
+          </Box>
           <Box
             sx={{
               display: "flex",

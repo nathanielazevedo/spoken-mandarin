@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { LessonCard } from "./LessonCard";
 import { isLocalEnvironment } from "../utils/environment";
+import { getCachedLessons } from "../utils/offlineCache";
 
 interface LessonSummary {
   id: string;
@@ -33,7 +34,33 @@ export const HomePage: React.FC<HomePageProps> = ({ onLessonClick }) => {
   const [newLessonTitle, setNewLessonTitle] = useState("");
   const [isCreatingLesson, setIsCreatingLesson] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [cachedLessons, setCachedLessons] = useState<Record<string, number>>(
+    {}
+  );
   const canCreateLessons = useMemo(() => isLocalEnvironment(), []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const refreshCachedLessons = () => {
+      const entries = getCachedLessons();
+      setCachedLessons(
+        entries.reduce<Record<string, number>>((acc, entry) => {
+          acc[entry.lessonId] = entry.cachedAt;
+          return acc;
+        }, {})
+      );
+    };
+
+    refreshCachedLessons();
+    window.addEventListener("focus", refreshCachedLessons);
+
+    return () => {
+      window.removeEventListener("focus", refreshCachedLessons);
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -225,6 +252,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onLessonClick }) => {
             onClick={handleLessonClick}
             isCompleted={false}
             progress={0}
+            isCached={Boolean(cachedLessons[lesson.id])}
+            cachedAt={cachedLessons[lesson.id]}
           />
         ))}
       </Box>
