@@ -109,6 +109,7 @@ export interface VocabularySectionProps {
   listenPauseStepMs?: number;
   onListenPauseChange?: (value: number) => void;
   showListenControls?: boolean;
+  showOrderNumbers?: boolean;
 }
 
 export const VocabularySection: React.FC<VocabularySectionProps> = ({
@@ -162,6 +163,7 @@ export const VocabularySection: React.FC<VocabularySectionProps> = ({
   listenPauseStepMs,
   onListenPauseChange,
   showListenControls = false,
+  showOrderNumbers = true,
 }) => {
   const generateAudioLabel = isGeneratingMissingAudio
     ? "Generating audio..."
@@ -401,6 +403,7 @@ export const VocabularySection: React.FC<VocabularySectionProps> = ({
             verificationResults={verificationResults}
             onGenerateHanzi={onGenerateHanzi}
             generatingHanziId={generatingHanziId}
+            showOrderNumbers={showOrderNumbers}
           />
         </>
       )}
@@ -440,6 +443,7 @@ interface VocabularyListContentProps
     | "onGenerateHanzi"
     | "generatingHanziId"
     | "audioVoices"
+    | "showOrderNumbers"
   > {
   vocabulary: PracticeEntry[];
   searchTerm?: string;
@@ -477,6 +481,7 @@ const VocabularyListContent: React.FC<VocabularyListContentProps> = ({
   onVerifyWord,
   verifyingWordId,
   verificationResults,
+  showOrderNumbers = true,
 }) => {
   const normalizedSearch = searchTerm ? toSearchKey(searchTerm) : "";
   const displaySearchTerm = searchTerm?.trim() ?? "";
@@ -574,7 +579,9 @@ const VocabularyListContent: React.FC<VocabularyListContentProps> = ({
                       onChangeWordOrder(vocab.id, nextPosition)
                   : undefined
               }
-              orderNumber={orderNumberMap.get(vocab.id)}
+              orderNumber={
+                showOrderNumbers ? orderNumberMap.get(vocab.id) : undefined
+              }
               onEditEntry={
                 onEditWord
                   ? (payload: { pinyin: string; english: string }) =>

@@ -64,6 +64,7 @@ export interface SentenceSectionProps {
   listenPauseStepMs?: number;
   onListenPauseChange?: (value: number) => void;
   showListenControls?: boolean;
+  showSentenceIndices?: boolean;
 }
 
 export const SentenceSection: React.FC<SentenceSectionProps> = ({
@@ -100,6 +101,7 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
   listenPauseStepMs,
   onListenPauseChange,
   showListenControls = false,
+  showSentenceIndices = true,
 }) => {
   const generateAudioLabel = isGeneratingMissingAudio
     ? "Generating audio..."
@@ -286,7 +288,9 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
                 <SortablePracticeCard
                   key={sentence.id}
                   entry={sentence}
-                  subtitle={`Sentence ${index + 1}`}
+                  subtitle={
+                    showSentenceIndices ? `Sentence ${index + 1}` : undefined
+                  }
                   vocabularyWordSet={vocabularyWordSet}
                   onMissingWordClick={onMissingWordClick}
                   isActive={currentSentenceAudioId === sentence.id}

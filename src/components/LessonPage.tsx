@@ -2264,6 +2264,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
           onListenPauseChange={setVocabularyPauseMs}
           onListenButtonClick={handleVocabularyListenButtonClick}
           showListenControls={isVocabularyListenControlsVisible}
+          showOrderNumbers={canEditLesson}
         />
 
         <SentenceSection
@@ -2313,6 +2314,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
           onListenPauseChange={setSentencePauseMs}
           onListenButtonClick={handleSentenceListenButtonClick}
           showListenControls={isSentenceListenControlsVisible}
+          showSentenceIndices={canEditLesson}
         />
 
         {canEditLesson && (

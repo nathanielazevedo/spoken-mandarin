@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "No Nonsense Mandarin",
   description:
     "No-fuss Mandarin practice with lessons, vocab, and audio drills.",
-  themeColor: "#10a37f",
+  themeColor: "#171717",
   manifest: "/manifest.json",
   icons: {
     icon: "/vite.svg",
