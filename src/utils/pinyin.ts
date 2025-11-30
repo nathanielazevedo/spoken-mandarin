@@ -58,6 +58,7 @@ const toneMap: Record<string, string> = {
 };
 
 const toneRegex = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜüńňǹĀÁǍÀĒÉĚÈĪÍǏÌŌÓǑÒŪÚǓÙǕǗǙǛÜŃŇǸ]/g;
+const nonLetterRegex = /[^a-z]/g;
 
 export const stripToneMarks = (text: string): string =>
   text.replace(toneRegex, (char) => toneMap[char] ?? char);
@@ -68,3 +69,10 @@ export const normalizePinyin = (text: string): string =>
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
+
+export const normalizePinyinWord = (text: string): string =>
+  stripToneMarks(text)
+    .trim()
+    .toLowerCase()
+    .replace(/v/g, "u")
+    .replace(nonLetterRegex, "");

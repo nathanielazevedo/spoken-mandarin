@@ -11,10 +11,14 @@ import {
   School as SchoolIcon,
   CheckCircle as CompletedIcon,
 } from "@mui/icons-material";
-import type { Lesson } from "../types/lesson";
+interface LessonSummary {
+  id: string;
+  title: string;
+  vocabularyCount: number;
+}
 
 interface LessonCardProps {
-  lesson: Lesson;
+  lesson: LessonSummary;
   onClick: (lessonId: string) => void;
   isCompleted?: boolean;
   progress?: number;
@@ -123,7 +127,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
               }}
             >
               <Typography variant="body2" color="text.secondary">
-                {lesson.vocabulary.length} words
+                {lesson.vocabularyCount} words
               </Typography>
 
               {progress > 0 && (

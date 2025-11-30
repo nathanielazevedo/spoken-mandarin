@@ -1,38 +1,17 @@
-export interface Vocabulary {
+export interface PracticeEntry {
   id: string;
   pinyin: string;
   english: string;
   audioUrl?: string;
 }
 
-export interface ConversationUtterance {
-  pinyin: string;
-  english: string;
-  hint?: string;
-}
+export type Vocabulary = PracticeEntry;
 
-export interface ConversationValidation {
-  exact?: string;
-  startsWith?: string;
-  endsWith?: string;
-  mustInclude?: string[];
-}
-
-export interface ConversationTurn {
-  id: string;
-  bot: ConversationUtterance;
-  user: ConversationUtterance;
-  validation?: ConversationValidation;
-}
-
-export interface Conversation {
-  title: string;
-  turns: ConversationTurn[];
-}
+export type Sentence = PracticeEntry;
 
 export interface Lesson {
   id: string;
   title: string;
   vocabulary: Vocabulary[];
-  conversation: Conversation;
+  sentences: Sentence[];
 }

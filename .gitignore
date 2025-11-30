@@ -12,6 +12,22 @@ dist
 dist-ssr
 *.local
 
+# Next.js build artifacts
+.next/
+.turbo/
+out/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.*
+*.env
+
+# Testing / coverage outputs
+coverage/
+tmp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +38,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+/src/generated/prisma

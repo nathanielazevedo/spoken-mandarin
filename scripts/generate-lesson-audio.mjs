@@ -32,6 +32,7 @@ Options:
   --outDir <path>   Output directory relative to project root (default: public/audio/<lessonId>)
   --force           Regenerate files even if they already exist
   --count <number>  Limit how many vocabulary entries to process (default: all)
+  --vocab <id>      Only process the vocabulary item with this id
   --voice <name>    OpenAI voice to use (default: ${DEFAULT_VOICE})
   --model <name>    OpenAI TTS model (default: ${DEFAULT_MODEL})
   --delay <ms>      Delay between requests to avoid rate limiting (default: ${DEFAULT_DELAY_MS})
@@ -47,6 +48,7 @@ const parseArgs = (rawArgs) => {
     model: DEFAULT_MODEL,
     delay: DEFAULT_DELAY_MS,
     count: null,
+    vocabId: null,
   };
   for (let i = 0; i < rawArgs.length; i += 1) {
     const arg = rawArgs[i];
@@ -72,6 +74,11 @@ const parseArgs = (rawArgs) => {
         if (!Number.isInteger(args.count) || args.count <= 0) {
           throw new Error("--count must be a positive integer");
         }
+        i += 1;
+        break;
+      case "--vocab":
+        if (!rawArgs[i + 1]) throw new Error("Missing value for --vocab");
+        args.vocabId = rawArgs[i + 1];
         i += 1;
         break;
       case "--model":
@@ -144,7 +151,14 @@ const main = async () => {
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const manifest = [];
-  const vocabulary = args.count ? lesson.vocabulary.slice(0, args.count) : lesson.vocabulary;
+  let vocabulary = args.count ? lesson.vocabulary.slice(0, args.count) : lesson.vocabulary;
+
+  if (args.vocabId) {
+    vocabulary = vocabulary.filter((entry) => entry.id === args.vocabId);
+    if (vocabulary.length === 0) {
+      throw new Error(`No vocabulary entry found with id "${args.vocabId}"`);
+    }
+  }
 
   if (args.count && lesson.vocabulary.length > vocabulary.length) {
     console.info(`Processing first ${vocabulary.length} of ${lesson.vocabulary.length} vocabulary entries.`);

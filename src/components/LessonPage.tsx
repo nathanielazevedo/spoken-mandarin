@@ -6,72 +6,1292 @@ import React, {
   useState,
 } from "react";
 import {
-  Typography,
-  Box,
-  Button,
-  Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Paper,
-  Chip,
-  Stack,
-} from "@mui/material";
-import {
-  School as FlashcardIcon,
-  Chat as ConversationIcon,
-  Psychology as PracticeIcon,
-  ExpandMore as ExpandMoreIcon,
-  ArrowBack as ArrowBackIcon,
-  VolumeUp as VolumeIcon,
-  StopCircle as StopIcon,
-} from "@mui/icons-material";
-import { useNavigate, useParams } from "react-router-dom";
-import { getLessonById } from "../data";
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
+import { Box, Button, CircularProgress, Alert } from "@mui/material";
+import type { Lesson, PracticeEntry } from "../types/lesson";
 import { Flashcards } from "./Flashcards";
-import { ConversationPractice } from "./ConversationPractice";
 import { VocabularyPractice } from "./VocabularyPractice";
+import { LessonHero } from "./lesson/LessonHero";
+import { VocabularySection } from "./lesson/VocabularySection";
+import { SentenceSection } from "./lesson/SentenceSection";
+import { AddVocabularyDialog } from "./lesson/dialogs/AddVocabularyDialog";
+import { AddSentenceDialog } from "./lesson/dialogs/AddSentenceDialog";
+import { BulkUploadDialog } from "./lesson/dialogs/BulkUploadDialog";
+import { normalizePinyinWord } from "../utils/pinyin";
 
-export const LessonPage: React.FC = () => {
-  const { lessonId } = useParams<{ lessonId: string }>();
-  const navigate = useNavigate();
-  const [showFlashcards, setShowFlashcards] = useState(false);
-  const [showConversationPractice, setShowConversationPractice] =
-    useState(false);
-  const [showConversationFlashcards, setShowConversationFlashcards] =
-    useState(false);
-  const [showVocabularyPractice, setShowVocabularyPractice] = useState(false);
-  const [isBatchPlaying, setIsBatchPlaying] = useState(false);
-  const [currentAudioIndex, setCurrentAudioIndex] = useState<number | null>(
+const applyPracticeOrder = <T extends PracticeEntry>(
+  entries: T[],
+  orderedIds: string[]
+): T[] => {
+  const entryMap = new Map(entries.map((entry) => [entry.id, entry]));
+  const ordered: T[] = [];
+
+  orderedIds.forEach((id) => {
+    const match = entryMap.get(id);
+    if (match) {
+      ordered.push(match);
+      entryMap.delete(id);
+    }
+  });
+
+  if (entryMap.size > 0) {
+    entries.forEach((entry) => {
+      if (entryMap.has(entry.id)) {
+        ordered.push(entry);
+        entryMap.delete(entry.id);
+      }
+    });
+  }
+
+  return ordered;
+};
+
+const omitKey = <T,>(record: Record<string, T>, key: string) => {
+  if (!Object.prototype.hasOwnProperty.call(record, key)) {
+    return record;
+  }
+  const next = { ...record };
+  delete next[key];
+  return next;
+};
+
+const tokenizePinyinWords = (value: string): string[] =>
+  value
+    .split(/\s+/)
+    .map((segment) => normalizePinyinWord(segment))
+    .filter((segment): segment is string => Boolean(segment));
+
+export interface LessonPageProps {
+  lessonId: string | null;
+  onBack: () => void;
+}
+
+export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
+  const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAddSentenceDialogOpen, setIsAddSentenceDialogOpen] = useState(false);
+  const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
+
+  const [isAddingWord, setIsAddingWord] = useState(false);
+  const [isAddingSentence, setIsAddingSentence] = useState(false);
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
+
+  const [bulkUploadError, setBulkUploadError] = useState<string | null>(null);
+  const [bulkUploadSuccessMessage, setBulkUploadSuccessMessage] = useState<
+    string | null
+  >(null);
+  const [bulkUploadCounts, setBulkUploadCounts] = useState<{
+    vocabulary: number;
+    sentences: number;
+  } | null>(null);
+  const [bulkUploadFilename, setBulkUploadFilename] = useState<string | null>(
     null
   );
+
+  const [deletingWordId, setDeletingWordId] = useState<string | null>(null);
+  const [deletingSentenceId, setDeletingSentenceId] = useState<string | null>(
+    null
+  );
+  const [generatingVocabularyAudioId, setGeneratingVocabularyAudioId] =
+    useState<string | null>(null);
+  const [generatingSentenceAudioId, setGeneratingSentenceAudioId] = useState<
+    string | null
+  >(null);
+  const [isGeneratingAllVocabularyAudio, setIsGeneratingAllVocabularyAudio] =
+    useState(false);
+  const [isGeneratingAllSentenceAudio, setIsGeneratingAllSentenceAudio] =
+    useState(false);
+
+  const [isSavingVocabularyOrder, setIsSavingVocabularyOrder] = useState(false);
+  const [isSavingSentenceOrder, setIsSavingSentenceOrder] = useState(false);
+
+  const [isVocabularyBatchPlaying, setIsVocabularyBatchPlaying] =
+    useState(false);
+  const [isSentenceBatchPlaying, setIsSentenceBatchPlaying] = useState(false);
+  const [currentVocabularyAudioId, setCurrentVocabularyAudioId] = useState<
+    string | null
+  >(null);
+  const [currentSentenceAudioId, setCurrentSentenceAudioId] = useState<
+    string | null
+  >(null);
+
+  const [showFlashcards, setShowFlashcards] = useState(false);
+  const [showSentenceFlashcards, setShowSentenceFlashcards] = useState(false);
+  const [showVocabularyPractice, setShowVocabularyPractice] = useState(false);
+  const [showSentencePractice, setShowSentencePractice] = useState(false);
+
+  const [vocabularySearchTerm, setVocabularySearchTerm] = useState("");
+  const [generatedSentenceSuggestions, setGeneratedSentenceSuggestions] =
+    useState<Record<string, { pinyin: string; english: string }>>({});
+  const [sentenceGenerationErrors, setSentenceGenerationErrors] = useState<
+    Record<string, string>
+  >({});
+  const [generatingSentenceIds, setGeneratingSentenceIds] = useState<
+    Record<string, boolean>
+  >({});
+  const [savingSentenceIds, setSavingSentenceIds] = useState<
+    Record<string, boolean>
+  >({});
+  const [vocabularyDialogDefaults, setVocabularyDialogDefaults] = useState<{
+    pinyin?: string;
+    english?: string;
+    insertPosition?: number;
+  } | null>(null);
+
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const lesson = lessonId ? getLessonById(lessonId) : null;
-  const conversationFlashcards = useMemo(() => {
-    if (!lesson) {
-      return [];
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    })
+  );
+
+  const vocabularyList = useMemo(() => lesson?.vocabulary ?? [], [lesson]);
+  const sentences = useMemo(() => lesson?.sentences ?? [], [lesson]);
+  const sentenceCount = sentences.length;
+  const missingVocabularyAudioCount = useMemo(() => {
+    return vocabularyList.filter((entry) => !entry.audioUrl).length;
+  }, [vocabularyList]);
+  const missingSentenceAudioCount = useMemo(() => {
+    return sentences.filter((entry) => !entry.audioUrl).length;
+  }, [sentences]);
+  const resolvedLessonId = lesson?.id ?? lessonId ?? null;
+
+  const canEditLesson = useMemo(() => {
+    const globalProcess =
+      typeof globalThis !== "undefined"
+        ? (globalThis as {
+            process?: { env?: Record<string, string | undefined> };
+          }).process
+        : undefined;
+
+    const isDevBuild =
+      (typeof import.meta !== "undefined" &&
+        (import.meta as ImportMeta & {
+          env?: { DEV?: boolean };
+        }).env?.DEV) ||
+      (globalProcess?.env?.NODE_ENV &&
+        globalProcess.env.NODE_ENV !== "production");
+
+    if (isDevBuild) {
+      return true;
+    }
+    if (typeof window === "undefined") {
+      return false;
+    }
+    const host = window.location.hostname;
+    if (!host) {
+      return false;
+    }
+    return (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host.endsWith(".local")
+    );
+  }, []);
+
+  const ensureEditable = useCallback(() => {
+    if (canEditLesson) {
+      return true;
+    }
+    setActionError("Editing is disabled outside of local development.");
+    return false;
+  }, [canEditLesson, setActionError]);
+
+  const vocabularyWordSet = useMemo(() => {
+    const next = new Set<string>();
+    vocabularyList.forEach((entry) => {
+      tokenizePinyinWords(entry.pinyin).forEach((word) => next.add(word));
+    });
+    return next;
+  }, [vocabularyList]);
+
+  const vocabularySentenceMatches = useMemo(() => {
+    if (!vocabularyList.length || !sentences.length) {
+      return {} as Record<string, PracticeEntry[]>;
     }
 
-    return lesson.conversation.turns.flatMap((turn) => [
-      {
-        id: `${turn.id}-bot`,
-        pinyin: turn.bot.pinyin,
-        english: turn.bot.english,
-      },
-      {
-        id: `${turn.id}-user`,
-        pinyin: turn.user.pinyin,
-        english: turn.user.english,
-      },
-    ]);
-  }, [lesson]);
-  const turnCount = lesson?.conversation.turns.length ?? 0;
-  const sentenceCount = turnCount * 2;
+    const sentenceTokens = sentences.map((sentence) =>
+      tokenizePinyinWords(sentence.pinyin)
+    );
 
-  const stopBatchPlayback = useCallback(() => {
+    const matches: Record<string, PracticeEntry[]> = {};
+
+    vocabularyList.forEach((vocab) => {
+      const vocabTokens = tokenizePinyinWords(vocab.pinyin);
+      if (!vocabTokens.length) {
+        return;
+      }
+
+      const matched: PracticeEntry[] = [];
+      sentenceTokens.forEach((tokens, index) => {
+        if (tokens.some((token) => vocabTokens.includes(token))) {
+          matched.push(sentences[index]);
+        }
+      });
+
+      if (matched.length) {
+        matches[vocab.id] = matched;
+      }
+    });
+
+    return matches;
+  }, [sentences, vocabularyList]);
+
+  const { map: vocabularyDuplicateMap, groups: vocabularyDuplicateGroups } =
+    useMemo(() => {
+      const groups = new Map<string, PracticeEntry[]>();
+      vocabularyList.forEach((entry) => {
+        const key = normalizePinyinWord(entry.pinyin);
+        if (!key) {
+          return;
+        }
+        const existing = groups.get(key);
+        if (existing) {
+          existing.push(entry);
+        } else {
+          groups.set(key, [entry]);
+        }
+      });
+
+      const map: Record<
+        string,
+        { normalizedKey: string; others: PracticeEntry[] }
+      > = {};
+      const duplicateGroups: Array<{
+        normalizedKey: string;
+        entries: PracticeEntry[];
+      }> = [];
+
+      groups.forEach((entries, normalizedKey) => {
+        if (entries.length <= 1) {
+          return;
+        }
+        duplicateGroups.push({ normalizedKey, entries });
+        entries.forEach((entry) => {
+          map[entry.id] = {
+            normalizedKey,
+            others: entries.filter((other) => other.id !== entry.id),
+          };
+        });
+      });
+
+      return { map, groups: duplicateGroups };
+    }, [vocabularyList]);
+
+  const handleVocabularySearchChange = useCallback((value: string) => {
+    setVocabularySearchTerm(value);
+  }, []);
+
+  useEffect(() => {
+    if (!lessonId) {
+      setLesson(null);
+      setIsLoading(false);
+      setError("Missing lesson id");
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const fetchLesson = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/lessons/${lessonId}`, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            response.status === 404
+              ? "Lesson not found"
+              : "Failed to load lesson"
+          );
+        }
+
+        const data: Lesson = await response.json();
+        setLesson(data);
+      } catch (err) {
+        if ((err as Error).name === "AbortError") {
+          return;
+        }
+        setError((err as Error).message || "Failed to load lesson");
+        setLesson(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLesson();
+
+    return () => {
+      controller.abort();
+    };
+  }, [lessonId]);
+
+  const handleOpenAddDialog = useCallback(() => {
+    setVocabularyDialogDefaults(null);
+    setIsAddDialogOpen(true);
+  }, []);
+
+  const handleCloseAddDialog = useCallback(() => {
+    if (isAddingWord) {
+      return;
+    }
+    setIsAddDialogOpen(false);
+    setVocabularyDialogDefaults(null);
+  }, [isAddingWord]);
+
+  const handleOpenAddSentenceDialog = useCallback(() => {
+    setIsAddSentenceDialogOpen(true);
+  }, []);
+
+  const handleCloseAddSentenceDialog = useCallback(() => {
+    if (isAddingSentence) {
+      return;
+    }
+    setIsAddSentenceDialogOpen(false);
+  }, [isAddingSentence]);
+
+  const handleCreateVocabularyFromWord = useCallback(
+    (word: string) => {
+      const trimmed = word.trim();
+      if (!trimmed) {
+        return;
+      }
+      setVocabularyDialogDefaults({
+        pinyin: trimmed,
+        english: "",
+        insertPosition: vocabularyList.length,
+      });
+      setIsAddDialogOpen(true);
+    },
+    [vocabularyList.length]
+  );
+
+  const normalizeBulkEntry = useCallback(
+    (entry: unknown, index: number, label: "vocabulary" | "sentences") => {
+      if (!entry || typeof entry !== "object") {
+        throw new Error(`Invalid ${label} entry at index ${index}.`);
+      }
+      const record = entry as Record<string, unknown>;
+      const pinyin =
+        typeof record.pinyin === "string" ? record.pinyin.trim() : "";
+      const english =
+        typeof record.english === "string" ? record.english.trim() : "";
+      const audioUrl =
+        typeof record.audioUrl === "string" ? record.audioUrl.trim() : "";
+
+      if (!pinyin || !english) {
+        throw new Error(
+          `Missing pinyin or english for ${label} entry at index ${index}.`
+        );
+      }
+
+      return audioUrl ? { pinyin, english, audioUrl } : { pinyin, english };
+    },
+    []
+  );
+
+  const handleOpenBulkUploadDialog = useCallback(() => {
+    setBulkUploadError(null);
+    setBulkUploadSuccessMessage(null);
+    setBulkUploadCounts(null);
+    setBulkUploadFilename(null);
+    setIsBulkUploadDialogOpen(true);
+  }, []);
+
+  const handleCloseBulkUploadDialog = useCallback(() => {
+    if (isBulkUploading) {
+      return;
+    }
+    setIsBulkUploadDialogOpen(false);
+  }, [isBulkUploading]);
+
+  const handleDeleteVocabulary = useCallback(async (vocabId: string) => {
+    if (!ensureEditable()) {
+      return;
+    }
+    setActionError(null);
+    setDeletingWordId(vocabId);
+    try {
+      const response = await fetch(`/api/vocabulary/${vocabId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete word");
+      }
+
+      setLesson((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          vocabulary: prev.vocabulary.filter((v) => v.id !== vocabId),
+        };
+      });
+      setGeneratedSentenceSuggestions((prev) => omitKey(prev, vocabId));
+      setSentenceGenerationErrors((prev) => omitKey(prev, vocabId));
+      setGeneratingSentenceIds((prev) => omitKey(prev, vocabId));
+      setSavingSentenceIds((prev) => omitKey(prev, vocabId));
+    } catch (err) {
+      console.error("Failed to delete vocabulary", err);
+      setActionError((err as Error).message || "Failed to delete word");
+    } finally {
+      setDeletingWordId(null);
+    }
+  }, [ensureEditable]);
+
+  const handleGenerateVocabularyAudio = useCallback(async (vocabId: string) => {
+    if (!ensureEditable()) {
+      return;
+    }
+    setActionError(null);
+    setGeneratingVocabularyAudioId(vocabId);
+    try {
+      const response = await fetch(`/api/vocabulary/${vocabId}/audio`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to generate audio");
+      }
+
+      const data = await response.json();
+      setLesson((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          vocabulary: prev.vocabulary.map((vocab) =>
+            vocab.id === vocabId ? { ...vocab, audioUrl: data.audioUrl } : vocab
+          ),
+        };
+      });
+    } catch (err) {
+      console.error("Failed to generate audio", err);
+      setActionError((err as Error).message || "Failed to generate audio");
+    } finally {
+      setGeneratingVocabularyAudioId(null);
+    }
+  }, [ensureEditable]);
+
+  const handleGenerateSentenceAudio = useCallback(
+    async (sentenceId: string) => {
+      if (!ensureEditable()) {
+        return;
+      }
+      setActionError(null);
+      setGeneratingSentenceAudioId(sentenceId);
+      try {
+        const response = await fetch(`/api/sentences/${sentenceId}/audio`, {
+          method: "POST",
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to generate audio");
+        }
+
+        const data = await response.json();
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            sentences: prev.sentences.map((sentence) =>
+              sentence.id === sentenceId
+                ? { ...sentence, audioUrl: data.audioUrl }
+                : sentence
+            ),
+          };
+        });
+      } catch (err) {
+        console.error("Failed to generate sentence audio", err);
+        setActionError((err as Error).message || "Failed to generate audio");
+      } finally {
+        setGeneratingSentenceAudioId(null);
+      }
+    },
+    [ensureEditable]
+  );
+
+  const handleGenerateMissingVocabularyAudio = useCallback(async () => {
+    const missingEntries = vocabularyList.filter((entry) => !entry.audioUrl);
+    if (!missingEntries.length) {
+      return;
+    }
+
+    if (!ensureEditable()) {
+      return;
+    }
+
+    setActionError(null);
+    setIsGeneratingAllVocabularyAudio(true);
+
+    try {
+      for (const entry of missingEntries) {
+        await handleGenerateVocabularyAudio(entry.id);
+      }
+    } finally {
+      setIsGeneratingAllVocabularyAudio(false);
+    }
+  }, [ensureEditable, handleGenerateVocabularyAudio, vocabularyList]);
+
+  const handleGenerateMissingSentenceAudio = useCallback(async () => {
+    const missingEntries = sentences.filter((entry) => !entry.audioUrl);
+    if (!missingEntries.length) {
+      return;
+    }
+
+    if (!ensureEditable()) {
+      return;
+    }
+
+    setActionError(null);
+    setIsGeneratingAllSentenceAudio(true);
+
+    try {
+      for (const entry of missingEntries) {
+        await handleGenerateSentenceAudio(entry.id);
+      }
+    } finally {
+      setIsGeneratingAllSentenceAudio(false);
+    }
+  }, [ensureEditable, handleGenerateSentenceAudio, sentences]);
+
+  const handleDeleteSentence = useCallback(async (sentenceId: string) => {
+    if (!ensureEditable()) {
+      return;
+    }
+    setActionError(null);
+    setDeletingSentenceId(sentenceId);
+    try {
+      const response = await fetch(`/api/sentences/${sentenceId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete sentence");
+      }
+
+      setLesson((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          sentences: prev.sentences.filter(
+            (sentence) => sentence.id !== sentenceId
+          ),
+        };
+      });
+    } catch (err) {
+      console.error("Failed to delete sentence", err);
+      setActionError((err as Error).message || "Failed to delete sentence");
+    } finally {
+      setDeletingSentenceId(null);
+    }
+  }, [ensureEditable]);
+
+  const revertVocabularyOrder = useCallback((previousOrderIds: string[]) => {
+    setLesson((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        vocabulary: applyPracticeOrder(prev.vocabulary, previousOrderIds),
+      };
+    });
+  }, []);
+
+  const saveVocabularyOrder = useCallback(
+    async (orderedIds: string[], previousOrderIds: string[]) => {
+      if (!resolvedLessonId) {
+        setActionError("Lesson id missing");
+        revertVocabularyOrder(previousOrderIds);
+        return;
+      }
+
+      if (!ensureEditable()) {
+        revertVocabularyOrder(previousOrderIds);
+        return;
+      }
+
+      setActionError(null);
+      setIsSavingVocabularyOrder(true);
+
+      const revertOrder = () => {
+        revertVocabularyOrder(previousOrderIds);
+      };
+
+      try {
+        const response = await fetch("/api/vocabulary/reorder", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            lessonId: resolvedLessonId,
+            vocabularyOrder: orderedIds,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to save order");
+        }
+      } catch (err) {
+        console.error("Failed to save vocabulary order", err);
+        revertOrder();
+        setActionError((err as Error).message || "Failed to save order");
+      } finally {
+        setIsSavingVocabularyOrder(false);
+      }
+    },
+    [ensureEditable, revertVocabularyOrder, resolvedLessonId]
+  );
+
+  const moveVocabularyToEnd = useCallback(
+    async (vocabId: string, previousOrderIds: string[]) => {
+      if (!resolvedLessonId) {
+        setActionError("Lesson id missing");
+        revertVocabularyOrder(previousOrderIds);
+        return;
+      }
+
+      if (!ensureEditable()) {
+        revertVocabularyOrder(previousOrderIds);
+        return;
+      }
+
+      setActionError(null);
+      setIsSavingVocabularyOrder(true);
+
+      const revertOrder = () => {
+        revertVocabularyOrder(previousOrderIds);
+      };
+
+      try {
+        const response = await fetch("/api/vocabulary/move-to-end", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            lessonId: resolvedLessonId,
+            vocabularyId: vocabId,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to move word to end");
+        }
+      } catch (err) {
+        console.error("Failed to move vocabulary to end", err);
+        revertOrder();
+        setActionError(
+          (err as Error).message || "Failed to move vocabulary to end"
+        );
+      } finally {
+        setIsSavingVocabularyOrder(false);
+      }
+    },
+    [ensureEditable, revertVocabularyOrder, resolvedLessonId]
+  );
+
+  const saveSentenceOrder = useCallback(
+    async (orderedIds: string[], previousOrderIds: string[]) => {
+      if (!resolvedLessonId) {
+        setActionError("Lesson id missing");
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            sentences: applyPracticeOrder(prev.sentences, previousOrderIds),
+          };
+        });
+        return;
+      }
+
+      if (!ensureEditable()) {
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            sentences: applyPracticeOrder(prev.sentences, previousOrderIds),
+          };
+        });
+        return;
+      }
+
+      setActionError(null);
+      setIsSavingSentenceOrder(true);
+
+      const revertOrder = () => {
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            sentences: applyPracticeOrder(prev.sentences, previousOrderIds),
+          };
+        });
+      };
+
+      try {
+        const response = await fetch("/api/sentences/reorder", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            lessonId: resolvedLessonId,
+            sentenceOrder: orderedIds,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to save sentence order");
+        }
+      } catch (err) {
+        console.error("Failed to save sentence order", err);
+        revertOrder();
+        setActionError(
+          (err as Error).message || "Failed to save sentence order"
+        );
+      } finally {
+        setIsSavingSentenceOrder(false);
+      }
+    },
+    [ensureEditable, resolvedLessonId]
+  );
+
+  const handleAddVocabulary = useCallback(
+    async (payload: {
+      pinyin: string;
+      english: string;
+      insertPosition: number;
+    }) => {
+      if (!ensureEditable()) {
+        return;
+      }
+      const pinyin = payload.pinyin.trim();
+      const english = payload.english.trim();
+
+      if (!resolvedLessonId) {
+        setActionError("Lesson id missing");
+        return;
+      }
+
+      if (!pinyin || !english) {
+        setActionError("Please provide both pinyin and English");
+        return;
+      }
+
+      const boundedPosition = Math.min(
+        Math.max(payload.insertPosition, 0),
+        vocabularyList.length
+      );
+
+      setActionError(null);
+      setIsAddingWord(true);
+
+      try {
+        const response = await fetch("/api/vocabulary", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            lessonId: resolvedLessonId,
+            pinyin,
+            english,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to add vocabulary");
+        }
+
+        const createdWord = await response.json();
+        const vocabularyIds = lesson?.vocabulary.map((vocab) => vocab.id) ?? [];
+        const desiredOrderIds = [...vocabularyIds];
+        desiredOrderIds.splice(boundedPosition, 0, createdWord.id);
+        const previousOrderIds = [...vocabularyIds, createdWord.id];
+
+        setLesson((prev) => {
+          if (!prev) return prev;
+          const nextVocabulary = [...prev.vocabulary];
+          nextVocabulary.splice(boundedPosition, 0, {
+            id: createdWord.id,
+            pinyin: createdWord.pinyin,
+            english: createdWord.english,
+            audioUrl: createdWord.audioUrl ?? null,
+          });
+          return {
+            ...prev,
+            vocabulary: nextVocabulary,
+          };
+        });
+
+        setIsAddDialogOpen(false);
+        setVocabularyDialogDefaults(null);
+
+        const insertedAtEnd = boundedPosition === vocabularyIds.length;
+        if (!insertedAtEnd) {
+          await saveVocabularyOrder(desiredOrderIds, previousOrderIds);
+        }
+      } catch (err) {
+        console.error("Failed to add vocabulary", err);
+        setActionError((err as Error).message || "Failed to add vocabulary");
+      } finally {
+        setIsAddingWord(false);
+      }
+    },
+    [
+      ensureEditable,
+      lesson?.vocabulary,
+      resolvedLessonId,
+      saveVocabularyOrder,
+      vocabularyList.length,
+    ]
+  );
+
+  const handleAddSentence = useCallback(
+    async (payload: {
+      pinyin: string;
+      english: string;
+      insertPosition: number;
+    }) => {
+      if (!ensureEditable()) {
+        return;
+      }
+      const pinyin = payload.pinyin.trim();
+      const english = payload.english.trim();
+
+      if (!resolvedLessonId) {
+        setActionError("Lesson id missing");
+        return;
+      }
+
+      if (!pinyin || !english) {
+        setActionError("Please provide both pinyin and English");
+        return;
+      }
+
+      const boundedPosition = Math.min(
+        Math.max(payload.insertPosition, 0),
+        sentenceCount
+      );
+
+      setActionError(null);
+      setIsAddingSentence(true);
+
+      try {
+        const response = await fetch("/api/sentences", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            lessonId: resolvedLessonId,
+            pinyin,
+            english,
+            insertPosition: boundedPosition,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to add sentence");
+        }
+
+        const createdSentence = await response.json();
+
+        setLesson((prev) => {
+          if (!prev) return prev;
+          const updatedSentences = [...prev.sentences];
+          updatedSentences.splice(boundedPosition, 0, {
+            id: createdSentence.id,
+            pinyin: createdSentence.pinyin,
+            english: createdSentence.english,
+            audioUrl: createdSentence.audioUrl ?? null,
+          });
+          return {
+            ...prev,
+            sentences: updatedSentences,
+          };
+        });
+
+        setIsAddSentenceDialogOpen(false);
+      } catch (err) {
+        console.error("Failed to add sentence", err);
+        setActionError((err as Error).message || "Failed to add sentence");
+      } finally {
+        setIsAddingSentence(false);
+      }
+    },
+    [ensureEditable, resolvedLessonId, sentenceCount]
+  );
+
+  const handleBulkUploadContent = useCallback(
+    async (rawText: string, sourceLabel: string) => {
+      if (!resolvedLessonId) {
+        setBulkUploadError("Lesson id missing");
+        return;
+      }
+
+      if (!ensureEditable()) {
+        return;
+      }
+
+      setBulkUploadError(null);
+      setBulkUploadSuccessMessage(null);
+      setBulkUploadCounts(null);
+      setBulkUploadFilename(sourceLabel);
+      setIsBulkUploading(true);
+
+      try {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(rawText);
+        } catch {
+          throw new Error("JSON content must be valid.");
+        }
+
+        if (!parsed || typeof parsed !== "object") {
+          throw new Error(
+            "JSON must be an object with vocabulary and/or sentences arrays."
+          );
+        }
+
+        const vocabularyInput = Array.isArray(
+          (parsed as { vocabulary?: unknown[] }).vocabulary
+        )
+          ? (parsed as { vocabulary: unknown[] }).vocabulary ?? []
+          : [];
+        const sentencesInput = Array.isArray(
+          (parsed as { sentences?: unknown[] }).sentences
+        )
+          ? (parsed as { sentences: unknown[] }).sentences ?? []
+          : [];
+
+        if (!vocabularyInput.length && !sentencesInput.length) {
+          throw new Error(
+            "Include at least one vocabulary or sentence entry in the JSON."
+          );
+        }
+
+        const normalizedVocabulary = vocabularyInput.map((entry, index) =>
+          normalizeBulkEntry(entry, index, "vocabulary")
+        );
+        const normalizedSentences = sentencesInput.map((entry, index) =>
+          normalizeBulkEntry(entry, index, "sentences")
+        );
+
+        const response = await fetch(`/api/lessons/${resolvedLessonId}/bulk`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            vocabulary: normalizedVocabulary,
+            sentences: normalizedSentences,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Bulk upload failed");
+        }
+
+        const data = await response.json();
+        const createdVocabulary = Array.isArray(data?.created?.vocabulary)
+          ? (data.created.vocabulary as Array<{
+              id: string;
+              pinyin: string;
+              english: string;
+              audioUrl?: string | null;
+            }>)
+          : [];
+        const createdSentences = Array.isArray(data?.created?.sentences)
+          ? (data.created.sentences as Array<{
+              id: string;
+              pinyin: string;
+              english: string;
+              audioUrl?: string | null;
+            }>)
+          : [];
+
+        setLesson((prev) => {
+          if (!prev) return prev;
+
+          const nextVocabulary = createdVocabulary.length
+            ? [
+                ...prev.vocabulary,
+                ...createdVocabulary.map((entry) => ({
+                  id: entry.id,
+                  pinyin: entry.pinyin,
+                  english: entry.english,
+                  audioUrl: entry.audioUrl ?? undefined,
+                })),
+              ]
+            : prev.vocabulary;
+
+          const nextSentences = createdSentences.length
+            ? [
+                ...prev.sentences,
+                ...createdSentences.map((entry) => ({
+                  id: entry.id,
+                  pinyin: entry.pinyin,
+                  english: entry.english,
+                  audioUrl: entry.audioUrl ?? undefined,
+                })),
+              ]
+            : prev.sentences;
+
+          return {
+            ...prev,
+            vocabulary: nextVocabulary,
+            sentences: nextSentences,
+          };
+        });
+
+        const vocabCount =
+          typeof data?.counts?.vocabulary === "number"
+            ? data.counts.vocabulary
+            : createdVocabulary.length;
+        const uploadSentenceCount =
+          typeof data?.counts?.sentences === "number"
+            ? data.counts.sentences
+            : createdSentences.length;
+
+        setBulkUploadCounts({
+          vocabulary: vocabCount,
+          sentences: uploadSentenceCount,
+        });
+        setBulkUploadSuccessMessage(
+          `Imported ${vocabCount} vocabulary entr${
+            vocabCount === 1 ? "y" : "ies"
+          } and ${uploadSentenceCount} sentence${
+            uploadSentenceCount === 1 ? "" : "s"
+          }.`
+        );
+      } catch (err) {
+        console.error("Bulk upload failed", err);
+        setBulkUploadError((err as Error).message || "Bulk upload failed");
+      } finally {
+        setIsBulkUploading(false);
+      }
+    },
+    [ensureEditable, normalizeBulkEntry, resolvedLessonId]
+  );
+
+  const handleBulkUploadFileSelected = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (!ensureEditable()) {
+        return;
+      }
+      const file = event.target.files?.[0];
+      event.target.value = "";
+
+      if (!file) {
+        return;
+      }
+
+      const fileText = await file.text();
+      handleBulkUploadContent(fileText, file.name);
+    },
+    [ensureEditable, handleBulkUploadContent]
+  );
+
+  const handleBulkUploadJsonPasted = useCallback(
+    (jsonText: string) => {
+      if (!ensureEditable()) {
+        return;
+      }
+      handleBulkUploadContent(jsonText, "Pasted JSON");
+    },
+    [ensureEditable, handleBulkUploadContent]
+  );
+
+  const handleVocabularyDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      if (!lesson || isSavingVocabularyOrder) {
+        return;
+      }
+
+      if (!ensureEditable()) {
+        return;
+      }
+
+      const { active, over } = event;
+      if (!over || active.id === over.id) {
+        return;
+      }
+
+      const currentOrderIds = lesson.vocabulary.map((vocab) => vocab.id);
+      const fromIndex = currentOrderIds.indexOf(String(active.id));
+      const toIndex = currentOrderIds.indexOf(String(over.id));
+
+      if (fromIndex === -1 || toIndex === -1) {
+        return;
+      }
+
+      const nextOrderIds = arrayMove(currentOrderIds, fromIndex, toIndex);
+      const previousOrderIds = [...currentOrderIds];
+
+      setLesson((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          vocabulary: applyPracticeOrder(prev.vocabulary, nextOrderIds),
+        };
+      });
+
+      saveVocabularyOrder(nextOrderIds, previousOrderIds);
+    },
+    [ensureEditable, isSavingVocabularyOrder, lesson, saveVocabularyOrder]
+  );
+
+  const handleMoveVocabularyToEnd = useCallback(
+    (vocabId: string) => {
+      if (!lesson || isSavingVocabularyOrder) {
+        return;
+      }
+
+      if (!ensureEditable()) {
+        return;
+      }
+
+      const currentOrderIds = lesson.vocabulary.map((vocab) => vocab.id);
+      const fromIndex = currentOrderIds.indexOf(vocabId);
+      const lastIndex = currentOrderIds.length - 1;
+
+      if (fromIndex === -1 || fromIndex === lastIndex) {
+        return;
+      }
+
+      const previousOrderIds = [...currentOrderIds];
+      const nextOrderIds = arrayMove(currentOrderIds, fromIndex, lastIndex);
+
+      setLesson((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          vocabulary: applyPracticeOrder(prev.vocabulary, nextOrderIds),
+        };
+      });
+
+      moveVocabularyToEnd(vocabId, previousOrderIds);
+    },
+    [ensureEditable, isSavingVocabularyOrder, lesson, moveVocabularyToEnd]
+  );
+
+  const handleChangeVocabularyOrderPosition = useCallback(
+    (vocabId: string, nextPosition: number) => {
+      if (!lesson || isSavingVocabularyOrder || !lesson.vocabulary.length) {
+        return;
+      }
+
+      if (!ensureEditable()) {
+        return;
+      }
+
+      const total = lesson.vocabulary.length;
+      const targetPosition = Math.min(
+        total,
+        Math.max(1, Math.floor(nextPosition))
+      );
+
+      const currentOrderIds = lesson.vocabulary.map((vocab) => vocab.id);
+      const currentIndex = currentOrderIds.indexOf(vocabId);
+      const targetIndex = targetPosition - 1;
+
+      if (currentIndex === -1 || currentIndex === targetIndex) {
+        return;
+      }
+
+      const previousOrderIds = [...currentOrderIds];
+      const nextOrderIds = arrayMove(
+        currentOrderIds,
+        currentIndex,
+        targetIndex
+      );
+
+      setLesson((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          vocabulary: applyPracticeOrder(prev.vocabulary, nextOrderIds),
+        };
+      });
+
+      saveVocabularyOrder(nextOrderIds, previousOrderIds);
+    },
+    [ensureEditable, isSavingVocabularyOrder, lesson, saveVocabularyOrder]
+  );
+
+  const handleSentenceDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      if (!lesson || isSavingSentenceOrder) {
+        return;
+      }
+
+      if (!ensureEditable()) {
+        return;
+      }
+
+      const { active, over } = event;
+      if (!over || active.id === over.id) {
+        return;
+      }
+
+      const currentOrderIds = sentences.map((sentence) => sentence.id);
+      const fromIndex = currentOrderIds.indexOf(String(active.id));
+      const toIndex = currentOrderIds.indexOf(String(over.id));
+
+      if (fromIndex === -1 || toIndex === -1) {
+        return;
+      }
+
+      const nextOrderIds = arrayMove(currentOrderIds, fromIndex, toIndex);
+      const previousOrderIds = [...currentOrderIds];
+
+      setLesson((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          sentences: applyPracticeOrder(prev.sentences, nextOrderIds),
+        };
+      });
+
+      saveSentenceOrder(nextOrderIds, previousOrderIds);
+    },
+    [
+      ensureEditable,
+      isSavingSentenceOrder,
+      lesson,
+      saveSentenceOrder,
+      sentences,
+    ]
+  );
+
+  const stopCurrentAudio = useCallback(() => {
     if (audioElementRef.current) {
+      audioElementRef.current.onended = null;
+      audioElementRef.current.onerror = null;
       audioElementRef.current.pause();
       audioElementRef.current.src = "";
       audioElementRef.current = null;
@@ -84,29 +1304,47 @@ export const LessonPage: React.FC = () => {
       window.speechSynthesis.cancel();
       speechUtteranceRef.current = null;
     }
-    setIsBatchPlaying(false);
-    setCurrentAudioIndex(null);
   }, []);
 
-  const playWordAtIndex = useCallback(
-    (index: number) => {
-      if (!lesson?.vocabulary[index]) {
-        stopBatchPlayback();
-        return;
-      }
+  const resetVocabularyPlaybackState = useCallback(() => {
+    setIsVocabularyBatchPlaying(false);
+    setCurrentVocabularyAudioId(null);
+  }, []);
 
-      const entry = lesson.vocabulary[index];
-      setCurrentAudioIndex(index);
+  const resetSentencePlaybackState = useCallback(() => {
+    setIsSentenceBatchPlaying(false);
+    setCurrentSentenceAudioId(null);
+  }, []);
 
-      const handleNext = () => playWordAtIndex(index + 1);
+  const stopAllPlayback = useCallback(() => {
+    stopCurrentAudio();
+    resetVocabularyPlaybackState();
+    resetSentencePlaybackState();
+  }, [
+    resetSentencePlaybackState,
+    resetVocabularyPlaybackState,
+    stopCurrentAudio,
+  ]);
+
+  const handleBackClick = useCallback(() => {
+    stopAllPlayback();
+    onBack();
+  }, [onBack, stopAllPlayback]);
+
+  const playPracticeEntry = useCallback(
+    (entry: PracticeEntry, onFinished?: () => void) => {
+      const handleDone = () => {
+        stopCurrentAudio();
+        onFinished?.();
+      };
 
       if (entry.audioUrl) {
         const audio = new Audio(entry.audioUrl);
         audioElementRef.current = audio;
-        audio.onended = handleNext;
-        audio.onerror = handleNext;
+        audio.onended = handleDone;
+        audio.onerror = handleDone;
         audio.play().catch(() => {
-          handleNext();
+          handleDone();
         });
         return;
       }
@@ -116,41 +1354,272 @@ export const LessonPage: React.FC = () => {
         speechUtteranceRef.current = utterance;
         utterance.lang = "zh-CN";
         utterance.rate = 0.95;
-        utterance.onend = handleNext;
-        utterance.onerror = handleNext;
+        utterance.onend = handleDone;
+        utterance.onerror = handleDone;
         window.speechSynthesis.speak(utterance);
         return;
       }
 
-      handleNext();
+      handleDone();
     },
-    [lesson, stopBatchPlayback]
+    [stopCurrentAudio]
   );
 
-  const handleStartBatchPlayback = useCallback(() => {
+  const playWordAtIndex = useCallback(
+    (index: number) => {
+      if (!lesson?.vocabulary[index]) {
+        resetVocabularyPlaybackState();
+        return;
+      }
+
+      const entry = lesson.vocabulary[index];
+      setCurrentVocabularyAudioId(entry.id);
+
+      playPracticeEntry(entry, () => playWordAtIndex(index + 1));
+    },
+    [lesson, playPracticeEntry, resetVocabularyPlaybackState]
+  );
+
+  const handlePlayWord = useCallback(
+    (vocabId: string) => {
+      if (!lesson?.vocabulary.length) {
+        return;
+      }
+      const entry = lesson.vocabulary.find((v) => v.id === vocabId);
+      if (!entry) {
+        return;
+      }
+      stopAllPlayback();
+      setCurrentVocabularyAudioId(entry.id);
+      playPracticeEntry(entry, () => setCurrentVocabularyAudioId(null));
+    },
+    [lesson, playPracticeEntry, stopAllPlayback]
+  );
+
+  const handlePlaySentence = useCallback(
+    (sentenceId: string) => {
+      const sentence = sentences.find((s) => s.id === sentenceId);
+      if (!sentence) {
+        return;
+      }
+      stopAllPlayback();
+      setCurrentSentenceAudioId(sentenceId);
+      playPracticeEntry(sentence, () => setCurrentSentenceAudioId(null));
+    },
+    [playPracticeEntry, sentences, stopAllPlayback]
+  );
+
+  const handlePracticeEntryCompleted = useCallback(
+    (entry: PracticeEntry, proceed: () => void) => {
+      stopCurrentAudio();
+      playPracticeEntry(entry, proceed);
+    },
+    [playPracticeEntry, stopCurrentAudio]
+  );
+
+  const handleGenerateSentenceSuggestion = useCallback(
+    async (vocabId: string) => {
+      if (!ensureEditable()) {
+        return;
+      }
+      setSentenceGenerationErrors((prev) => omitKey(prev, vocabId));
+      setGeneratingSentenceIds((prev) => ({ ...prev, [vocabId]: true }));
+
+      try {
+        const response = await fetch(
+          `/api/vocabulary/${vocabId}/generate-sentence`,
+          {
+            method: "POST",
+          }
+        );
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to generate sentence");
+        }
+
+        const pinyin =
+          typeof data.pinyin === "string" ? data.pinyin.trim() : "";
+        const english =
+          typeof data.english === "string" ? data.english.trim() : "";
+
+        if (!pinyin || !english) {
+          throw new Error("OpenAI returned an empty sentence");
+        }
+
+        setGeneratedSentenceSuggestions((prev) => ({
+          ...prev,
+          [vocabId]: { pinyin, english },
+        }));
+      } catch (err) {
+        setSentenceGenerationErrors((prev) => ({
+          ...prev,
+          [vocabId]: (err as Error).message || "Failed to generate sentence",
+        }));
+      } finally {
+        setGeneratingSentenceIds((prev) => omitKey(prev, vocabId));
+      }
+    },
+    [ensureEditable]
+  );
+
+  const handleDismissGeneratedSentence = useCallback((vocabId: string) => {
+    setGeneratedSentenceSuggestions((prev) => omitKey(prev, vocabId));
+    setSentenceGenerationErrors((prev) => omitKey(prev, vocabId));
+  }, []);
+
+  const handleSaveGeneratedSentenceSuggestion = useCallback(
+    async (vocabId: string) => {
+      if (!ensureEditable()) {
+        return;
+      }
+      if (!resolvedLessonId) {
+        setActionError("Lesson id missing");
+        return;
+      }
+
+      const suggestion = generatedSentenceSuggestions[vocabId];
+      if (!suggestion) {
+        setSentenceGenerationErrors((prev) => ({
+          ...prev,
+          [vocabId]: "No generated sentence to save",
+        }));
+        return;
+      }
+
+      setSentenceGenerationErrors((prev) => omitKey(prev, vocabId));
+      setSavingSentenceIds((prev) => ({ ...prev, [vocabId]: true }));
+
+      try {
+        const response = await fetch("/api/sentences", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            lessonId: resolvedLessonId,
+            pinyin: suggestion.pinyin,
+            english: suggestion.english,
+          }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to save sentence");
+        }
+
+        const createdId = typeof data.id === "string" ? data.id : "";
+        const createdPinyin =
+          typeof data.pinyin === "string" ? data.pinyin : suggestion.pinyin;
+        const createdEnglish =
+          typeof data.english === "string" ? data.english : suggestion.english;
+
+        if (!createdId) {
+          throw new Error("Sentence response missing id");
+        }
+
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            sentences: [
+              ...prev.sentences,
+              {
+                id: createdId,
+                pinyin: createdPinyin,
+                english: createdEnglish,
+                audioUrl: data.audioUrl ?? null,
+              },
+            ],
+          };
+        });
+
+        setGeneratedSentenceSuggestions((prev) => omitKey(prev, vocabId));
+      } catch (err) {
+        setSentenceGenerationErrors((prev) => ({
+          ...prev,
+          [vocabId]: (err as Error).message || "Failed to save sentence",
+        }));
+      } finally {
+        setSavingSentenceIds((prev) => omitKey(prev, vocabId));
+      }
+    },
+    [ensureEditable, generatedSentenceSuggestions, resolvedLessonId]
+  );
+
+  const handleStartVocabularyBatch = useCallback(() => {
     if (!lesson?.vocabulary.length) {
       return;
     }
-    stopBatchPlayback();
-    setIsBatchPlaying(true);
+    stopAllPlayback();
+    setIsVocabularyBatchPlaying(true);
     playWordAtIndex(0);
-  }, [lesson, playWordAtIndex, stopBatchPlayback]);
+  }, [lesson, playWordAtIndex, stopAllPlayback]);
 
-  const handleBatchPlaybackToggle = useCallback(() => {
-    if (isBatchPlaying) {
-      stopBatchPlayback();
+  const handleVocabularyBatchToggle = useCallback(() => {
+    if (isVocabularyBatchPlaying) {
+      stopAllPlayback();
     } else {
-      handleStartBatchPlayback();
+      handleStartVocabularyBatch();
     }
-  }, [handleStartBatchPlayback, isBatchPlaying, stopBatchPlayback]);
+  }, [handleStartVocabularyBatch, isVocabularyBatchPlaying, stopAllPlayback]);
+
+  const playSentenceAtIndex = useCallback(
+    (index: number) => {
+      if (!sentences[index]) {
+        resetSentencePlaybackState();
+        return;
+      }
+
+      const entry = sentences[index];
+      setCurrentSentenceAudioId(entry.id);
+      playPracticeEntry(entry, () => playSentenceAtIndex(index + 1));
+    },
+    [playPracticeEntry, resetSentencePlaybackState, sentences]
+  );
+
+  const handleStartSentenceBatch = useCallback(() => {
+    if (!sentences.length) {
+      return;
+    }
+    stopAllPlayback();
+    setIsSentenceBatchPlaying(true);
+    playSentenceAtIndex(0);
+  }, [playSentenceAtIndex, sentences.length, stopAllPlayback]);
+
+  const handleSentenceBatchToggle = useCallback(() => {
+    if (isSentenceBatchPlaying) {
+      stopAllPlayback();
+    } else {
+      handleStartSentenceBatch();
+    }
+  }, [handleStartSentenceBatch, isSentenceBatchPlaying, stopAllPlayback]);
 
   useEffect(() => {
     return () => {
-      stopBatchPlayback();
+      stopAllPlayback();
     };
-  }, [stopBatchPlayback]);
+  }, [stopAllPlayback]);
 
-  if (!lesson) {
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          pt: { xs: 2, sm: 3 },
+          pb: 4,
+          px: { xs: 2, sm: 3, md: 4, lg: 5 },
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error || !lesson) {
     return (
       <Box
         sx={{
@@ -160,10 +1629,12 @@ export const LessonPage: React.FC = () => {
           width: "100%",
         }}
       >
-        <Typography variant="h4">Lesson not found</Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-          The lesson you're looking for doesn't exist.
-        </Typography>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error || "Lesson not found"}
+        </Alert>
+        <Button variant="contained" onClick={handleBackClick}>
+          Back to lessons
+        </Button>
       </Box>
     );
   }
@@ -179,294 +1650,141 @@ export const LessonPage: React.FC = () => {
       }}
     >
       <Box sx={{ maxWidth: 1100, mx: "auto", width: "100%" }}>
-        <Paper
-          sx={{
-            mb: 4,
-            p: { xs: 3, sm: 4 },
-            borderRadius: 4,
-            backgroundColor: (theme) => theme.palette.background.paper,
-            boxShadow: (theme) => (theme.palette.mode === "dark" ? 4 : 2),
-          }}
-        >
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={2}
-            alignItems={{ xs: "flex-start", sm: "center" }}
-            justifyContent="space-between"
-          >
-            <Box>
-              <Button
-                variant="text"
-                startIcon={<ArrowBackIcon />}
-                onClick={() => navigate("/")}
-                sx={{ pl: 0, mb: 1, color: "text.secondary" }}
-              >
-                Back to Lessons
-              </Button>
-              <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
-                {lesson.title}
-              </Typography>
-              <Typography color="text.secondary">
-                Master {lesson.vocabulary.length} essential words and a{" "}
-                {sentenceCount}-sentence dialogue built for real conversations.
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={1} flexWrap="wrap">
-              <Chip
-                color="primary"
-                variant="outlined"
-                label={`${lesson.vocabulary.length} vocab words`}
-              />
-              <Chip
-                color="secondary"
-                variant="outlined"
-                label={`${turnCount} dialogue turns`}
-              />
-            </Stack>
-          </Stack>
-        </Paper>
+        <LessonHero
+          title={lesson.title}
+          description={`Master ${lesson.vocabulary.length} essential words and practice ${sentenceCount} real sentences.`}
+          vocabularyCount={lesson.vocabulary.length}
+          sentenceCount={sentenceCount}
+          onBackClick={handleBackClick}
+          onBulkUploadClick={
+            canEditLesson ? handleOpenBulkUploadDialog : undefined
+          }
+        />
 
-        <Paper
-          sx={{
-            mb: 3,
-            p: { xs: 2.5, sm: 3 },
-            borderRadius: 3,
-            backgroundColor: (theme) => theme.palette.background.paper,
-            border: "1px solid",
-            borderColor: (theme) => theme.palette.divider,
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              mb: 1,
-              flexWrap: "wrap",
-              gap: 1,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <FlashcardIcon sx={{ color: "primary.main" }} />
-              <Typography variant="h6" fontWeight={600}>
-                Vocabulary ({lesson.vocabulary.length} words)
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={1}>
-              {/* <Button
-                variant="outlined"
-                startIcon={<FlashcardIcon />}
-                onClick={() => setShowFlashcards(true)}
-              >
-                Flashcards
-              </Button> */}
-              <Button
-                variant="outlined"
-                startIcon={isBatchPlaying ? <StopIcon /> : <VolumeIcon />}
-                onClick={handleBatchPlaybackToggle}
-              >
-                {isBatchPlaying ? "Stop audio" : "Listen to deck"}
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<PracticeIcon />}
-                onClick={() => setShowVocabularyPractice(true)}
-              >
-                Practice
-              </Button>
-            </Stack>
-          </Box>
-          <Accordion
-            sx={{
-              mt: 2,
-              // borderRadius: 2,
-              backgroundColor: "background.paper",
-              border: "1px solid",
-              borderColor: "divider",
-            }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon sx={{ color: "text.secondary" }} />}
-            >
-              <Typography fontWeight={600}>
-                Tap to view vocabulary list
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    sm: "repeat(auto-fill, minmax(250px, 1fr))",
-                    md: "repeat(auto-fill, minmax(280px, 1fr))",
-                    lg: "repeat(auto-fill, minmax(300px, 1fr))",
-                  },
-                  gap: { xs: 2, sm: 3 },
-                  width: "100%",
-                }}
-              >
-                {lesson.vocabulary.map((vocab, index) => {
-                  const isActive =
-                    isBatchPlaying && currentAudioIndex === index;
-                  return (
-                    <Box
-                      key={vocab.id}
-                      sx={{
-                        p: 2,
-                        border: "1px solid",
-                        borderColor: isActive ? "primary.main" : "divider",
-                        borderRadius: 2,
-                        backgroundColor: isActive
-                          ? "action.selected"
-                          : "background.default",
-                        boxShadow: isActive ? 3 : 0,
-                      }}
-                    >
-                      <Typography variant="h6" fontWeight={600}>
-                        {vocab.pinyin}
-                      </Typography>
-                      <Typography variant="body1">{vocab.english}</Typography>
-                      {isActive && (
-                        <Chip
-                          label="Now playing"
-                          size="small"
-                          color="primary"
-                          sx={{ mt: 1 }}
-                        />
-                      )}
-                    </Box>
-                  );
-                })}
-              </Box>
-            </AccordionDetails>
-          </Accordion>
-        </Paper>
+        {actionError && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {actionError}
+          </Alert>
+        )}
 
-        <Paper
-          sx={{
-            mb: 3,
-            p: { xs: 2.5, sm: 3 },
-            borderRadius: 3,
-            backgroundColor: (theme) => theme.palette.background.paper,
-            border: "1px solid",
-            borderColor: (theme) => theme.palette.divider,
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              mb: 1,
-              flexWrap: "wrap",
-              gap: 1,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <ConversationIcon sx={{ color: "primary.main" }} />
-              <Typography variant="h6" fontWeight={600}>
-                Conversation: {lesson.conversation.title}
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={1}>
-              {/* <Button
-                variant="outlined"
-                startIcon={<FlashcardIcon />}
-                onClick={() => setShowConversationFlashcards(true)}
-              >
-                Flashcards
-              </Button> */}
-              <Button
-                variant="contained"
-                startIcon={<PracticeIcon />}
-                onClick={() => setShowConversationPractice(true)}
-              >
-                Practice
-              </Button>
-            </Stack>
-          </Box>
-          <Accordion
-            sx={{
-              mt: 2,
-              borderRadius: 2,
-              backgroundColor: "background.paper",
-              border: "1px solid",
-              borderColor: "divider",
-            }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon sx={{ color: "text.secondary" }} />}
-            >
-              <Typography fontWeight={600}>
-                Tap to rehearse the dialogue
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 3,
-                }}
-              >
-                {lesson.conversation.turns.map((turn) => (
-                  <Box
-                    key={turn.id}
-                    sx={{
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 2,
-                      p: 2,
-                      backgroundColor: "background.default",
-                    }}
-                  >
-                    <Typography
-                      variant="subtitle2"
-                      color="primary.main"
-                      sx={{ mb: 1 }}
-                    >
-                      Robot
-                    </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      {turn.bot.pinyin}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {turn.bot.english}
-                    </Typography>
+        <VocabularySection
+          vocabulary={lesson.vocabulary}
+          sentenceMatches={vocabularySentenceMatches}
+          duplicateVocabularyMap={vocabularyDuplicateMap}
+          duplicateVocabularyGroups={vocabularyDuplicateGroups}
+          searchTerm={vocabularySearchTerm}
+          onSearchTermChange={handleVocabularySearchChange}
+          generatedSentenceSuggestions={generatedSentenceSuggestions}
+          generatingSentenceIds={generatingSentenceIds}
+          savingSentenceIds={savingSentenceIds}
+          sentenceGenerationErrors={sentenceGenerationErrors}
+          onGenerateSentence={
+            canEditLesson ? handleGenerateSentenceSuggestion : undefined
+          }
+          onSaveGeneratedSentence={
+            canEditLesson ? handleSaveGeneratedSentenceSuggestion : undefined
+          }
+          onDismissGeneratedSentence={
+            canEditLesson ? handleDismissGeneratedSentence : undefined
+          }
+          sensors={sensors}
+          onDragEnd={canEditLesson ? handleVocabularyDragEnd : undefined}
+          isSavingOrder={isSavingVocabularyOrder}
+          isBatchPlaying={isVocabularyBatchPlaying}
+          onBatchToggle={handleVocabularyBatchToggle}
+          onPracticeClick={() => setShowVocabularyPractice(true)}
+          onAddWordClick={canEditLesson ? handleOpenAddDialog : undefined}
+          onFlashcardsClick={() => setShowFlashcards(true)}
+          currentAudioId={currentVocabularyAudioId}
+          deletingWordId={deletingWordId}
+          generatingAudioId={generatingVocabularyAudioId}
+          missingAudioCount={missingVocabularyAudioCount}
+          isGeneratingMissingAudio={isGeneratingAllVocabularyAudio}
+          onGenerateMissingAudio={
+            canEditLesson ? handleGenerateMissingVocabularyAudio : undefined
+          }
+          onPlayWord={handlePlayWord}
+          onDeleteWord={canEditLesson ? handleDeleteVocabulary : undefined}
+          onRegenerateAudio={
+            canEditLesson ? handleGenerateVocabularyAudio : undefined
+          }
+          onMoveWordToEnd={
+            canEditLesson ? handleMoveVocabularyToEnd : undefined
+          }
+          onChangeWordOrder={
+            canEditLesson ? handleChangeVocabularyOrderPosition : undefined
+          }
+          reorderingEnabled={canEditLesson}
+        />
 
-                    <Divider
-                      sx={{ my: 2, borderColor: "rgba(255, 255, 255, 0.1)" }}
-                    />
+        <SentenceSection
+          sentences={sentences}
+          vocabularyWordSet={vocabularyWordSet}
+          onMissingWordClick={
+            canEditLesson ? handleCreateVocabularyFromWord : undefined
+          }
+          sensors={sensors}
+          onDragEnd={canEditLesson ? handleSentenceDragEnd : undefined}
+          isSavingOrder={isSavingSentenceOrder}
+          isBatchPlaying={isSentenceBatchPlaying}
+          onBatchToggle={handleSentenceBatchToggle}
+          onPracticeClick={() => setShowSentencePractice(true)}
+          onAddSentenceClick={
+            canEditLesson ? handleOpenAddSentenceDialog : undefined
+          }
+          onFlashcardsClick={() => setShowSentenceFlashcards(true)}
+          currentSentenceAudioId={currentSentenceAudioId}
+          deletingSentenceId={deletingSentenceId}
+          generatingSentenceAudioId={generatingSentenceAudioId}
+          missingAudioCount={missingSentenceAudioCount}
+          isGeneratingMissingAudio={isGeneratingAllSentenceAudio}
+          onGenerateMissingAudio={
+            canEditLesson ? handleGenerateMissingSentenceAudio : undefined
+          }
+          onPlaySentence={handlePlaySentence}
+          onDeleteSentence={
+            canEditLesson ? handleDeleteSentence : undefined
+          }
+          onRegenerateAudio={
+            canEditLesson ? handleGenerateSentenceAudio : undefined
+          }
+          reorderingEnabled={canEditLesson}
+        />
 
-                    <Typography
-                      variant="subtitle2"
-                      color="secondary.main"
-                      sx={{ mb: 1 }}
-                    >
-                      You
-                    </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      {turn.user.pinyin}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {turn.user.english}
-                    </Typography>
-                    {turn.user.hint && (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: "block", mt: 1 }}
-                      >
-                        {turn.user.hint}
-                      </Typography>
-                    )}
-                  </Box>
-                ))}
-              </Box>
-            </AccordionDetails>
-          </Accordion>
-        </Paper>
+        {canEditLesson && (
+          <AddVocabularyDialog
+            open={isAddDialogOpen}
+            isSubmitting={isAddingWord}
+            vocabularyList={vocabularyList}
+            initialValues={vocabularyDialogDefaults}
+            onClose={handleCloseAddDialog}
+            onSubmit={handleAddVocabulary}
+          />
+        )}
+
+        {canEditLesson && (
+          <AddSentenceDialog
+            open={isAddSentenceDialogOpen}
+            isSubmitting={isAddingSentence}
+            sentences={sentences}
+            onClose={handleCloseAddSentenceDialog}
+            onSubmit={handleAddSentence}
+          />
+        )}
+
+        {canEditLesson && (
+          <BulkUploadDialog
+            open={isBulkUploadDialogOpen}
+            isUploading={isBulkUploading}
+            selectedFilename={bulkUploadFilename}
+            error={bulkUploadError}
+            successMessage={bulkUploadSuccessMessage}
+            counts={bulkUploadCounts}
+            onClose={handleCloseBulkUploadDialog}
+            onFileSelected={handleBulkUploadFileSelected}
+            onJsonPasted={handleBulkUploadJsonPasted}
+          />
+        )}
 
         {showFlashcards && (
           <Flashcards
@@ -475,10 +1793,11 @@ export const LessonPage: React.FC = () => {
           />
         )}
 
-        {showConversationFlashcards && (
+        {showSentenceFlashcards && (
           <Flashcards
-            vocabulary={conversationFlashcards}
-            onClose={() => setShowConversationFlashcards(false)}
+            vocabulary={sentences}
+            title="Sentence Flashcards"
+            onClose={() => setShowSentenceFlashcards(false)}
           />
         )}
 
@@ -486,13 +1805,17 @@ export const LessonPage: React.FC = () => {
           <VocabularyPractice
             vocabulary={lesson.vocabulary}
             onClose={() => setShowVocabularyPractice(false)}
+            onEntryCompleted={handlePracticeEntryCompleted}
           />
         )}
 
-        {showConversationPractice && (
-          <ConversationPractice
-            conversation={lesson.conversation}
-            onClose={() => setShowConversationPractice(false)}
+        {showSentencePractice && (
+          <VocabularyPractice
+            vocabulary={sentences}
+            title="Sentence Practice"
+            itemLabel="sentences"
+            onClose={() => setShowSentencePractice(false)}
+            onEntryCompleted={handlePracticeEntryCompleted}
           />
         )}
       </Box>

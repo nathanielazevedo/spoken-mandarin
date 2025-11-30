@@ -1,0 +1,542 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  Box,
+  Button,
+  Collapse,
+  Chip,
+  CircularProgress,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography,
+  TextField,
+} from "@mui/material";
+import {
+  Audiotrack as AudiotrackIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  Delete as DeleteIcon,
+  DragIndicator as DragIndicatorIcon,
+  KeyboardDoubleArrowDown as MoveToEndIcon,
+} from "@mui/icons-material";
+import type { PracticeEntry } from "../../types/lesson";
+import { normalizePinyinWord } from "../../utils/pinyin";
+
+export interface SortablePracticeCardProps {
+  entry: PracticeEntry;
+  subtitle?: string;
+  matchedSentences?: PracticeEntry[];
+  duplicateEntries?: PracticeEntry[];
+  generatedSentence?: { pinyin: string; english: string };
+  isActive: boolean;
+  isDeleting: boolean;
+  isGeneratingAudio: boolean;
+  dragDisabled: boolean;
+  onPlay: () => void;
+  onDelete?: () => void;
+  onRegenerateAudio?: () => void;
+  onGenerateSentence?: () => void;
+  onSaveGeneratedSentence?: () => void;
+  onClearGeneratedSentence?: () => void;
+  isGeneratingSentence?: boolean;
+  isSavingGeneratedSentence?: boolean;
+  generationError?: string;
+  vocabularyWordSet?: Set<string>;
+  onMissingWordClick?: (word: string) => void;
+  onMoveToEnd?: () => void;
+  onUpdateOrder?: (nextPosition: number) => void;
+  orderNumber?: number;
+}
+
+export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
+  entry,
+  subtitle,
+  matchedSentences,
+  duplicateEntries,
+  generatedSentence,
+  isActive,
+  isDeleting,
+  isGeneratingAudio,
+  dragDisabled,
+  onPlay,
+  onDelete,
+  onRegenerateAudio,
+  onGenerateSentence,
+  onSaveGeneratedSentence,
+  onClearGeneratedSentence,
+  isGeneratingSentence,
+  isSavingGeneratedSentence,
+  generationError,
+  vocabularyWordSet,
+  onMissingWordClick,
+  onMoveToEnd,
+  onUpdateOrder,
+  orderNumber,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: entry.id, disabled: dragDisabled });
+
+  const inlineStyle: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? undefined : transition || undefined,
+    opacity: isDragging ? 0.9 : 1,
+    willChange: transform ? "transform" : undefined,
+  };
+
+  const sentenceMatches = matchedSentences ?? [];
+  const duplicateMatches = duplicateEntries ?? [];
+  const [isMatchesOpen, setIsMatchesOpen] = useState(false);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [orderInput, setOrderInput] = useState(orderNumber?.toString() ?? "");
+  const hasAudio = Boolean(entry.audioUrl && entry.audioUrl.trim());
+  const hasSentenceMatches = sentenceMatches.length > 0;
+  const isMatchesVisible = hasSentenceMatches && isMatchesOpen;
+  const highlightedPinyinSegments = useMemo(() => {
+    if (!vocabularyWordSet) {
+      return null;
+    }
+    const segments = entry.pinyin.split(/(\s+)/);
+    return segments.map((text) => {
+      if (!text.trim()) {
+        return { text, highlight: false };
+      }
+      const normalized = normalizePinyinWord(text);
+      if (!normalized) {
+        return { text, highlight: false };
+      }
+      return { text, highlight: !vocabularyWordSet.has(normalized) };
+    });
+  }, [entry.pinyin, vocabularyWordSet]);
+
+  useEffect(() => {
+    if (!isEditingOrder && typeof orderNumber === "number") {
+      setOrderInput(orderNumber.toString());
+    }
+  }, [isEditingOrder, orderNumber]);
+
+  const handleOrderChipClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setIsEditingOrder(true);
+    setOrderInput(orderNumber?.toString() ?? "");
+  };
+
+  const handleOrderSubmit = () => {
+    if (!onUpdateOrder) {
+      setIsEditingOrder(false);
+      return;
+    }
+    const parsed = Number(orderInput);
+    if (!Number.isFinite(parsed)) {
+      setIsEditingOrder(false);
+      return;
+    }
+    onUpdateOrder(parsed);
+    setIsEditingOrder(false);
+  };
+
+  const handleOrderInputKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleOrderSubmit();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setIsEditingOrder(false);
+      setOrderInput(orderNumber?.toString() ?? "");
+    }
+  };
+
+  const handleToggleMatches = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setIsMatchesOpen((prev) => !prev);
+  };
+
+  const handleGenerateClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!isGeneratingSentence && onGenerateSentence) {
+      onGenerateSentence();
+    }
+  };
+
+  const handleSaveClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    onSaveGeneratedSentence?.();
+  };
+
+  const handleDismissClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    onClearGeneratedSentence?.();
+  };
+
+  return (
+    <Box
+      ref={setNodeRef}
+      style={inlineStyle}
+      sx={{
+        position: "relative",
+        width: "100%",
+        p: 2,
+        border: "1px solid",
+        borderColor: isActive ? "primary.main" : "divider",
+        borderRadius: 2,
+        backgroundColor: isActive ? "action.selected" : "background.default",
+        boxShadow: isActive ? 3 : 0,
+        cursor: "pointer",
+      }}
+      onClick={onPlay}
+    >
+      <Stack
+        direction="row"
+        spacing={0.5}
+        sx={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          alignItems: "center",
+        }}
+      >
+        <Tooltip
+          title={dragDisabled ? "Reordering disabled" : "Drag to reorder"}
+        >
+          <span>
+            <IconButton
+              size="small"
+              disabled={dragDisabled}
+              {...attributes}
+              {...listeners}
+              sx={{
+                color: "text.secondary",
+                cursor: dragDisabled ? "not-allowed" : "grab",
+              }}
+            >
+              <DragIndicatorIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+        {onMoveToEnd && (
+          <Tooltip title="Send to end">
+            <span>
+              <IconButton
+                size="small"
+                disabled={dragDisabled}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onMoveToEnd();
+                }}
+                sx={{ color: "text.secondary" }}
+              >
+                <MoveToEndIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
+        {onRegenerateAudio && (
+          <Tooltip title="Regenerate audio">
+            <span>
+              <IconButton
+                size="small"
+                disabled={isGeneratingAudio}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRegenerateAudio();
+                }}
+                sx={{ color: "text.secondary" }}
+              >
+                {isGeneratingAudio ? (
+                  <CircularProgress size={16} thickness={5} />
+                ) : (
+                  <AudiotrackIcon fontSize="small" />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
+        {onGenerateSentence && (
+          <Tooltip
+            title={
+              generatedSentence ? "Regenerate sentence" : "Generate sentence"
+            }
+          >
+            <span>
+              <IconButton
+                size="small"
+                disabled={Boolean(isSavingGeneratedSentence)}
+                onClick={handleGenerateClick}
+                sx={{ color: "text.secondary" }}
+              >
+                {isGeneratingSentence ? (
+                  <CircularProgress size={16} thickness={5} />
+                ) : (
+                  <AutoAwesomeIcon fontSize="small" />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
+        {onDelete && (
+          <Tooltip title="Delete">
+            <span>
+              <IconButton
+                size="small"
+                disabled={isDeleting}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDelete();
+                }}
+                sx={{ color: "text.secondary" }}
+              >
+                {isDeleting ? (
+                  <CircularProgress size={16} thickness={5} />
+                ) : (
+                  <DeleteIcon fontSize="small" />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
+      </Stack>
+      {(subtitle || typeof orderNumber === "number") && (
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+          {typeof orderNumber === "number" && !isEditingOrder && (
+            <Chip
+              size="small"
+              label={`#${orderNumber}`}
+              variant="outlined"
+              sx={{
+                fontWeight: 600,
+                cursor: onUpdateOrder ? "pointer" : undefined,
+              }}
+              onClick={onUpdateOrder ? handleOrderChipClick : undefined}
+              onMouseDown={(event) => event.stopPropagation()}
+            />
+          )}
+          {typeof orderNumber === "number" && isEditingOrder && (
+            <TextField
+              size="small"
+              autoFocus
+              value={orderInput}
+              onChange={(event) => setOrderInput(event.target.value)}
+              onBlur={handleOrderSubmit}
+              onKeyDown={handleOrderInputKeyDown}
+              inputProps={{
+                inputMode: "numeric",
+                pattern: "[0-9]*",
+                min: 1,
+                style: { width: 56, textAlign: "center" },
+              }}
+              sx={{ width: 70 }}
+              onClick={(event) => event.stopPropagation()}
+            />
+          )}
+          {subtitle && (
+            <Typography variant="subtitle2" color="text.secondary">
+              {subtitle}
+            </Typography>
+          )}
+          {!hasAudio && (
+            <Chip
+              size="small"
+              label="Audio missing"
+              color="warning"
+              variant="outlined"
+              sx={{ fontWeight: 600 }}
+            />
+          )}
+        </Stack>
+      )}
+      <Typography variant="h6" fontWeight={600} sx={{ pr: 8 }}>
+        {highlightedPinyinSegments
+          ? highlightedPinyinSegments.map((segment, index) => {
+              const trimmedWord = segment.text.trim();
+              const isClickable = Boolean(
+                segment.highlight && trimmedWord && onMissingWordClick
+              );
+
+              const handleClick = (
+                event: React.MouseEvent<HTMLSpanElement>
+              ) => {
+                if (!isClickable || !trimmedWord) {
+                  return;
+                }
+                event.stopPropagation();
+                onMissingWordClick?.(trimmedWord);
+              };
+
+              const handleKeyDown = (
+                event: React.KeyboardEvent<HTMLSpanElement>
+              ) => {
+                if (!isClickable || !trimmedWord) {
+                  return;
+                }
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onMissingWordClick?.(trimmedWord);
+                }
+              };
+
+              return (
+                <Box
+                  component="span"
+                  key={`${entry.id}-segment-${index}`}
+                  role={isClickable ? "button" : undefined}
+                  tabIndex={isClickable ? 0 : undefined}
+                  onClick={isClickable ? handleClick : undefined}
+                  onKeyDown={isClickable ? handleKeyDown : undefined}
+                  sx={{
+                    ...(segment.highlight
+                      ? { color: "error.main", fontWeight: 700 }
+                      : undefined),
+                    ...(isClickable
+                      ? {
+                          cursor: "pointer",
+                          textDecoration: "underline dotted",
+                        }
+                      : undefined),
+                  }}
+                >
+                  {segment.text}
+                </Box>
+              );
+            })
+          : entry.pinyin}
+      </Typography>
+      <Typography variant="body1" sx={{ pr: 8 }}>
+        {entry.english}
+      </Typography>
+      {duplicateMatches.length > 0 && (
+        <Box
+          sx={{
+            mt: 1,
+            p: 1,
+            borderRadius: 1.5,
+            border: "1px dashed",
+            borderColor: "warning.light",
+            backgroundColor: (theme) =>
+              theme.palette.mode === "dark"
+                ? "rgba(255, 193, 7, 0.08)"
+                : "rgba(255, 193, 7, 0.08)",
+          }}
+        >
+          <Chip
+            label="Duplicate pinyin"
+            size="small"
+            color="warning"
+            sx={{ mb: 0.75 }}
+          />
+          <Typography variant="body2" sx={{ color: "warning.dark" }}>
+            Matches:
+          </Typography>
+          <Stack spacing={0.25} sx={{ mt: 0.5 }}>
+            {duplicateMatches.map((duplicate) => (
+              <Typography variant="body2" key={duplicate.id}>
+                {duplicate.pinyin} — {duplicate.english}
+              </Typography>
+            ))}
+          </Stack>
+        </Box>
+      )}
+      {generationError && (
+        <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+          {generationError}
+        </Typography>
+      )}
+      {generatedSentence && (
+        <Box
+          sx={{
+            mt: 1,
+            p: 1.25,
+            border: "1px dashed",
+            borderColor: "divider",
+            borderRadius: 1.5,
+            backgroundColor: "background.paper",
+          }}
+        >
+          <Typography variant="caption" color="text.secondary">
+            AI suggestion
+          </Typography>
+          <Typography variant="subtitle2" sx={{ mt: 0.5 }}>
+            {generatedSentence.pinyin}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {generatedSentence.english}
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
+            {onSaveGeneratedSentence && (
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleSaveClick}
+                disabled={Boolean(isSavingGeneratedSentence)}
+              >
+                Save sentence
+                {isSavingGeneratedSentence && (
+                  <CircularProgress size={16} thickness={5} sx={{ ml: 1 }} />
+                )}
+              </Button>
+            )}
+            {onGenerateSentence && (
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={handleGenerateClick}
+                disabled={Boolean(isGeneratingSentence)}
+              >
+                Regenerate
+              </Button>
+            )}
+            {onClearGeneratedSentence && (
+              <Button size="small" onClick={handleDismissClick}>
+                Dismiss
+              </Button>
+            )}
+          </Stack>
+        </Box>
+      )}
+      {hasSentenceMatches && (
+        <Chip
+          label={`${sentenceMatches.length} sentence${
+            sentenceMatches.length === 1 ? "" : "s"
+          }`}
+          size="small"
+          color={isMatchesVisible ? "primary" : "default"}
+          variant={isMatchesVisible ? "filled" : "outlined"}
+          sx={{ mt: 1, alignSelf: "flex-start" }}
+          onClick={handleToggleMatches}
+          onMouseDown={(event) => event.stopPropagation()}
+        />
+      )}
+      {hasSentenceMatches && (
+        <Collapse in={isMatchesVisible} timeout="auto" unmountOnExit>
+          <Stack spacing={0.5} sx={{ mt: 1 }}>
+            {sentenceMatches.map((sentence) => (
+              <Box
+                key={sentence.id}
+                sx={{
+                  borderLeft: "2px solid",
+                  borderColor: "divider",
+                  pl: 1,
+                }}
+              >
+                <Typography variant="body2" fontWeight={600}>
+                  {sentence.pinyin}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {sentence.english}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Collapse>
+      )}
+    </Box>
+  );
+};

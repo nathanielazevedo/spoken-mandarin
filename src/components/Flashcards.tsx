@@ -16,16 +16,18 @@ import {
   Close as CloseIcon,
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
-import type { Vocabulary } from "../types/lesson";
+import type { PracticeEntry } from "../types/lesson";
 
 interface FlashcardsProps {
-  vocabulary: Vocabulary[];
+  vocabulary: PracticeEntry[];
   onClose: () => void;
+  title?: string;
 }
 
 export const Flashcards: React.FC<FlashcardsProps> = ({
   vocabulary,
   onClose,
+  title = "Flashcards",
 }) => {
   if (vocabulary.length === 0) {
     return (
@@ -139,7 +141,7 @@ export const Flashcards: React.FC<FlashcardsProps> = ({
           }}
         >
           <Typography variant="h6">
-            Flashcards ({currentIndex + 1} of {vocabulary.length})
+            {title} ({currentIndex + 1} of {vocabulary.length})
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <ToggleButtonGroup

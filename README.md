@@ -15,6 +15,28 @@ npm install
 npm run dev
 ```
 
+## Bulk Upload Vocabulary & Sentences
+
+1. Create a `.json` file that contains optional `vocabulary` and `sentences` arrays. Each entry requires `pinyin` and `english`, with an optional `audioUrl` if you already have hosted audio.
+2. Open any lesson in the app and click the **Bulk upload JSON** button near the lesson stats.
+3. Pick your file in the dialog. The app validates the payload locally and pushes it to `/api/lessons/[id]/bulk`, appending items in the same order they appear in the file.
+
+Example payload:
+
+```json
+{
+  "vocabulary": [
+    { "pinyin": "nǐ hǎo", "english": "hello" },
+    { "pinyin": "xièxiè", "english": "thank you", "audioUrl": "/audio/lesson-01/v2.mp3" }
+  ],
+  "sentences": [
+    { "pinyin": "nǐ hǎo ma?", "english": "How are you?" }
+  ]
+}
+```
+
+Any validation errors (missing fields, malformed JSON, etc.) are surfaced directly in the dialog so the file can be fixed before retrying.
+
 ## Pre-generating Lesson Audio with OpenAI
 
 Use `scripts/generate-lesson-audio.mjs` to batch-create MP3 files for each vocabulary item via OpenAI TTS. Outputs land in `public/audio/<lessonId>` and can be referenced in lesson data.

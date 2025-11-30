@@ -1,0 +1,45 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider     = "prisma-client-js"
+  moduleFormat = "cjs"
+  engineType   = "driverAdapters"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Lesson {
+  id         String       @id @default(cuid())
+  title      String
+  vocabulary Vocabulary[]
+  sentences  Sentence[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model Vocabulary {
+  id       String  @id @default(cuid())
+  lessonId String
+  lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  pinyin   String
+  english  String
+  audioUrl String?
+  order    Int     @default(0)
+
+  @@index([lessonId])
+}
+
+model Sentence {
+  id       String  @id @default(cuid())
+  lessonId String
+  lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  pinyin   String
+  english  String
+  audioUrl String?
+  order    Int     @default(0)
+
+  @@index([lessonId])
+}
