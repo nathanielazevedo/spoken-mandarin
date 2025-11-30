@@ -87,6 +87,9 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
     : missingHanziCount && missingHanziCount > 0
     ? `Generate hanzi (${missingHanziCount})`
     : "Generate missing hanzi";
+  const showGenerateAudioAction = Boolean(onGenerateMissingAudio);
+  const showGenerateHanziAction = Boolean(onGenerateMissingHanzi);
+  const hasBulkActions = showGenerateAudioAction || showGenerateHanziAction;
 
   return (
     <PracticeSection
@@ -118,68 +121,70 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
         reorderingEnabled && isSavingOrder ? "Saving new order..." : null
       }
       extraActions={
-        <Stack direction="row" spacing={1} flexWrap="wrap">
-          {onGenerateMissingAudio && (
-            <Tooltip title={generateAudioLabel} key="generate-audio">
-              <span>
-                <IconButton
-                  color="primary"
-                  onClick={onGenerateMissingAudio}
-                  disabled={
-                    isGeneratingMissingAudio ||
-                    !missingAudioCount ||
-                    !sentences.length
-                  }
-                  aria-label="Generate missing audio"
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "divider",
-                    width: 48,
-                    height: 48,
-                  }}
-                >
-                  {missingAudioCount && missingAudioCount > 0 ? (
-                    <Badge color="secondary" badgeContent={missingAudioCount}>
+        hasBulkActions ? (
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {showGenerateAudioAction && (
+              <Tooltip title={generateAudioLabel} key="generate-audio">
+                <span>
+                  <IconButton
+                    color="primary"
+                    onClick={onGenerateMissingAudio}
+                    disabled={
+                      isGeneratingMissingAudio ||
+                      !missingAudioCount ||
+                      !sentences.length
+                    }
+                    aria-label="Generate missing audio"
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      width: 48,
+                      height: 48,
+                    }}
+                  >
+                    {missingAudioCount && missingAudioCount > 0 ? (
+                      <Badge color="secondary" badgeContent={missingAudioCount}>
+                        <AudioWaveIcon />
+                      </Badge>
+                    ) : (
                       <AudioWaveIcon />
-                    </Badge>
-                  ) : (
-                    <AudioWaveIcon />
-                  )}
-                </IconButton>
-              </span>
-            </Tooltip>
-          )}
-          {onGenerateMissingHanzi && (
-            <Tooltip title={generateHanziLabel} key="generate-hanzi">
-              <span>
-                <IconButton
-                  color="primary"
-                  onClick={onGenerateMissingHanzi}
-                  disabled={
-                    isGeneratingMissingHanzi ||
-                    !missingHanziCount ||
-                    !sentences.length
-                  }
-                  aria-label="Generate missing hanzi"
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "divider",
-                    width: 48,
-                    height: 48,
-                  }}
-                >
-                  {missingHanziCount && missingHanziCount > 0 ? (
-                    <Badge color="secondary" badgeContent={missingHanziCount}>
+                    )}
+                  </IconButton>
+                </span>
+              </Tooltip>
+            )}
+            {showGenerateHanziAction && (
+              <Tooltip title={generateHanziLabel} key="generate-hanzi">
+                <span>
+                  <IconButton
+                    color="primary"
+                    onClick={onGenerateMissingHanzi}
+                    disabled={
+                      isGeneratingMissingHanzi ||
+                      !missingHanziCount ||
+                      !sentences.length
+                    }
+                    aria-label="Generate missing hanzi"
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      width: 48,
+                      height: 48,
+                    }}
+                  >
+                    {missingHanziCount && missingHanziCount > 0 ? (
+                      <Badge color="secondary" badgeContent={missingHanziCount}>
+                        <TranslateIcon />
+                      </Badge>
+                    ) : (
                       <TranslateIcon />
-                    </Badge>
-                  ) : (
-                    <TranslateIcon />
-                  )}
-                </IconButton>
-              </span>
-            </Tooltip>
-          )}
-        </Stack>
+                    )}
+                  </IconButton>
+                </span>
+              </Tooltip>
+            )}
+          </Stack>
+        ) : undefined
       }
     >
       {sentences.length === 0 ? (
@@ -228,6 +233,7 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
                   }
                   isGeneratingHanzi={generatingHanziId === sentence.id}
                   audioVoice={audioVoices?.[sentence.id]}
+                  showDragHandle={reorderingEnabled}
                 />
               ))}
             </Stack>

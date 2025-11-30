@@ -65,6 +65,7 @@ export interface SortablePracticeCardProps {
   };
   onGenerateHanzi?: () => Promise<void> | void;
   isGeneratingHanzi?: boolean;
+  showDragHandle?: boolean;
 }
 
 export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
@@ -99,6 +100,7 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
   verificationResult,
   onGenerateHanzi,
   isGeneratingHanzi,
+  showDragHandle = true,
 }) => {
   const [isEditingWord, setIsEditingWord] = useState(false);
   const [editPinyin, setEditPinyin] = useState(entry.pinyin);
@@ -262,6 +264,17 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
     onClearGeneratedSentence?.();
   };
 
+  const shouldShowDragHandle = showDragHandle;
+  const hasActionIcons =
+    shouldShowDragHandle ||
+    Boolean(onMoveToEnd) ||
+    Boolean(onVerifyPinyin) ||
+    Boolean(onRegenerateAudio) ||
+    Boolean(onEditEntry) ||
+    Boolean(onGenerateSentence) ||
+    Boolean(onGenerateHanzi) ||
+    Boolean(onDelete);
+
   return (
     <Box
       ref={setNodeRef}
@@ -279,187 +292,191 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
       }}
       onClick={isEditingWord ? undefined : onPlay}
     >
-      <Stack
-        direction="row"
-        spacing={0.5}
-        sx={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          alignItems: "center",
-        }}
-      >
-        <Tooltip
-          title={dragDisabled ? "Reordering disabled" : "Drag to reorder"}
+      {hasActionIcons && (
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            alignItems: "center",
+          }}
         >
-          <span>
-            <IconButton
-              size="small"
-              disabled={dragDisabled}
-              {...attributes}
-              {...(dragHandleListeners ?? {})}
-              sx={{
-                color: "text.secondary",
-                cursor: dragDisabled ? "not-allowed" : "grab",
-              }}
+          {shouldShowDragHandle && (
+            <Tooltip
+              title={dragDisabled ? "Reordering disabled" : "Drag to reorder"}
             >
-              <DragIndicatorIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-        {onMoveToEnd && (
-          <Tooltip title="Send to end">
-            <span>
-              <IconButton
-                size="small"
-                disabled={dragDisabled}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onMoveToEnd();
-                }}
-                sx={{ color: "text.secondary" }}
-              >
-                <MoveToEndIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
-        {onVerifyPinyin && (
-          <Tooltip title="Verify pinyin">
-            <span>
-              <IconButton
-                size="small"
-                disabled={Boolean(isVerifying)}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onVerifyPinyin();
-                }}
-                sx={{ color: "text.secondary" }}
-              >
-                {isVerifying ? (
-                  <CircularProgress size={16} thickness={5} />
-                ) : (
-                  <SpellcheckIcon fontSize="small" />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
-        {onGenerateHanzi && (
-          <Tooltip
-            title={entry.hanzi ? "Refresh characters" : "Fetch characters"}
-          >
-            <span>
-              <IconButton
-                size="small"
-                disabled={Boolean(isGeneratingHanzi)}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onGenerateHanzi();
-                }}
-                sx={{ color: "text.secondary" }}
-              >
-                {isGeneratingHanzi ? (
-                  <CircularProgress size={16} thickness={5} />
-                ) : (
-                  <TranslateIcon fontSize="small" />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
-        {onRegenerateAudio && (
-          <Tooltip title="Regenerate audio">
-            <span>
-              <IconButton
-                size="small"
-                disabled={isGeneratingAudio}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onRegenerateAudio();
-                }}
-                sx={{ color: "text.secondary" }}
-              >
-                {isGeneratingAudio ? (
-                  <CircularProgress size={16} thickness={5} />
-                ) : (
-                  <AudiotrackIcon fontSize="small" />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
-        {onEditEntry && (
-          <Tooltip title={isEditingWord ? "Close editor" : "Edit word"}>
-            <span>
-              <IconButton
-                size="small"
-                disabled={editingDisabled}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (isEditingWord) {
-                    handleCancelEdit(event);
-                  } else {
-                    handleStartEdit(event);
-                  }
-                }}
-                sx={{ color: "text.secondary" }}
-              >
-                {editingDisabled ? (
-                  <CircularProgress size={16} thickness={5} />
-                ) : isEditingWord ? (
-                  <CloseIcon fontSize="small" />
-                ) : (
-                  <EditIcon fontSize="small" />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
-        {onGenerateSentence && (
-          <Tooltip
-            title={
-              generatedSentence ? "Regenerate sentence" : "Generate sentence"
-            }
-          >
-            <span>
-              <IconButton
-                size="small"
-                disabled={Boolean(isSavingGeneratedSentence)}
-                onClick={handleGenerateClick}
-                sx={{ color: "text.secondary" }}
-              >
-                {isGeneratingSentence ? (
-                  <CircularProgress size={16} thickness={5} />
-                ) : (
-                  <AutoAwesomeIcon fontSize="small" />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
-        {onDelete && (
-          <Tooltip title="Delete">
-            <span>
-              <IconButton
-                size="small"
-                disabled={isDeleting}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onDelete();
-                }}
-                sx={{ color: "text.secondary" }}
-              >
-                {isDeleting ? (
-                  <CircularProgress size={16} thickness={5} />
-                ) : (
-                  <DeleteIcon fontSize="small" />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
-      </Stack>
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={dragDisabled}
+                  {...attributes}
+                  {...(dragHandleListeners ?? {})}
+                  sx={{
+                    color: "text.secondary",
+                    cursor: dragDisabled ? "not-allowed" : "grab",
+                  }}
+                >
+                  <DragIndicatorIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {onMoveToEnd && (
+            <Tooltip title="Send to end">
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={dragDisabled}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onMoveToEnd();
+                  }}
+                  sx={{ color: "text.secondary" }}
+                >
+                  <MoveToEndIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {onVerifyPinyin && (
+            <Tooltip title="Verify pinyin">
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={Boolean(isVerifying)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onVerifyPinyin();
+                  }}
+                  sx={{ color: "text.secondary" }}
+                >
+                  {isVerifying ? (
+                    <CircularProgress size={16} thickness={5} />
+                  ) : (
+                    <SpellcheckIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {onGenerateHanzi && (
+            <Tooltip
+              title={entry.hanzi ? "Refresh characters" : "Fetch characters"}
+            >
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={Boolean(isGeneratingHanzi)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onGenerateHanzi();
+                  }}
+                  sx={{ color: "text.secondary" }}
+                >
+                  {isGeneratingHanzi ? (
+                    <CircularProgress size={16} thickness={5} />
+                  ) : (
+                    <TranslateIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {onRegenerateAudio && (
+            <Tooltip title="Regenerate audio">
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={isGeneratingAudio}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRegenerateAudio();
+                  }}
+                  sx={{ color: "text.secondary" }}
+                >
+                  {isGeneratingAudio ? (
+                    <CircularProgress size={16} thickness={5} />
+                  ) : (
+                    <AudiotrackIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {onEditEntry && (
+            <Tooltip title={isEditingWord ? "Close editor" : "Edit word"}>
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={editingDisabled}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (isEditingWord) {
+                      handleCancelEdit(event);
+                    } else {
+                      handleStartEdit(event);
+                    }
+                  }}
+                  sx={{ color: "text.secondary" }}
+                >
+                  {editingDisabled ? (
+                    <CircularProgress size={16} thickness={5} />
+                  ) : isEditingWord ? (
+                    <CloseIcon fontSize="small" />
+                  ) : (
+                    <EditIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {onGenerateSentence && (
+            <Tooltip
+              title={
+                generatedSentence ? "Regenerate sentence" : "Generate sentence"
+              }
+            >
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={Boolean(isSavingGeneratedSentence)}
+                  onClick={handleGenerateClick}
+                  sx={{ color: "text.secondary" }}
+                >
+                  {isGeneratingSentence ? (
+                    <CircularProgress size={16} thickness={5} />
+                  ) : (
+                    <AutoAwesomeIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {onDelete && (
+            <Tooltip title="Delete">
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={isDeleting}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDelete();
+                  }}
+                  sx={{ color: "text.secondary" }}
+                >
+                  {isDeleting ? (
+                    <CircularProgress size={16} thickness={5} />
+                  ) : (
+                    <DeleteIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+        </Stack>
+      )}
       {(subtitle || typeof orderNumber === "number") && (
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
           {typeof orderNumber === "number" && !isEditingOrder && (
