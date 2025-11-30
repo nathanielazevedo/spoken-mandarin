@@ -28,6 +28,7 @@ export interface PracticeSectionProps {
   addButton?: SectionButtonConfig;
   infoMessage?: string | null;
   extraActions?: ReactNode;
+  listenControls?: ReactNode;
   defaultExpanded?: boolean;
   children: ReactNode;
 }
@@ -40,6 +41,7 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
   addButton,
   infoMessage,
   extraActions,
+  listenControls,
   defaultExpanded = false,
   children,
 }) => {
@@ -148,6 +150,20 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
               {action}
             </Box>
           ))}
+          {listenControls ? (
+            <Box
+              sx={{
+                width: { xs: "100%", sm: "auto" },
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              {listenControls}
+            </Box>
+          ) : null}
           {renderIconButton(listenButton)}
           {renderIconButton(practiceButton)}
         </Stack>

@@ -4,9 +4,10 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Language Practice App",
-  description: "Learn Mandarin through interactive lessons",
-  themeColor: "#0f172a",
+  title: "No Nonsense Mandarin",
+  description:
+    "No-fuss Mandarin practice with lessons, vocab, and audio drills.",
+  themeColor: "#10a37f",
   manifest: "/manifest.json",
   icons: {
     icon: "/vite.svg",

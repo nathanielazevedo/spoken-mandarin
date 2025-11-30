@@ -1,12 +1,12 @@
 {
-  "name": "Language Practice",
-  "short_name": "Language",
+  "name": "No Nonsense Mandarin",
+  "short_name": "NoNonsense",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "description": "Learn Mandarin through interactive lessons, vocabulary drills, and audio practice.",
+  "background_color": "#171717",
+  "theme_color": "#10a37f",
+  "description": "No Nonsense Mandarin — interactive lessons, vocabulary drills, and audio practice.",
   "icons": [
     {
       "src": "/vite.svg",

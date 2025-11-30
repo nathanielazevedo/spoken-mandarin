@@ -25,6 +25,11 @@ import { BulkUploadDialog } from "./lesson/dialogs/BulkUploadDialog";
 import { normalizePinyinWord } from "../utils/pinyin";
 import { isLocalEnvironment } from "../utils/environment";
 
+const LISTEN_PAUSE_MIN_MS = 0;
+const LISTEN_PAUSE_MAX_MS = 3000;
+const LISTEN_PAUSE_STEP_MS = 100;
+const DEFAULT_LISTEN_PAUSE_MS = 800;
+
 const applyPracticeOrder = <T extends PracticeEntry>(
   entries: T[],
   orderedIds: string[]
@@ -155,6 +160,18 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   const [currentSentenceAudioId, setCurrentSentenceAudioId] = useState<
     string | null
   >(null);
+  const [
+    isVocabularyListenControlsVisible,
+    setVocabularyListenControlsVisible,
+  ] = useState(false);
+  const [isSentenceListenControlsVisible, setSentenceListenControlsVisible] =
+    useState(false);
+  const [vocabularyPauseMs, setVocabularyPauseMs] = useState(
+    DEFAULT_LISTEN_PAUSE_MS
+  );
+  const [sentencePauseMs, setSentencePauseMs] = useState(
+    DEFAULT_LISTEN_PAUSE_MS
+  );
 
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showSentenceFlashcards, setShowSentenceFlashcards] = useState(false);
@@ -181,12 +198,35 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const pauseTimeoutRef = useRef<number | null>(null);
+  const vocabularyBatchTokenRef = useRef(0);
+  const sentenceBatchTokenRef = useRef(0);
+  const vocabularyPauseMsRef = useRef(vocabularyPauseMs);
+  const sentencePauseMsRef = useRef(sentencePauseMs);
+  const vocabularyBatchResumeIndexRef = useRef(0);
+  const sentenceBatchResumeIndexRef = useRef(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
     })
   );
+
+  const handleVocabularyListenButtonClick = useCallback(() => {
+    setVocabularyListenControlsVisible((prev) => !prev);
+  }, []);
+
+  const handleSentenceListenButtonClick = useCallback(() => {
+    setSentenceListenControlsVisible((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    vocabularyPauseMsRef.current = vocabularyPauseMs;
+  }, [vocabularyPauseMs]);
+
+  useEffect(() => {
+    sentencePauseMsRef.current = sentencePauseMs;
+  }, [sentencePauseMs]);
 
   const vocabularyList = useMemo(() => lesson?.vocabulary ?? [], [lesson]);
   const sentences = useMemo(() => lesson?.sentences ?? [], [lesson]);
@@ -1617,6 +1657,15 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
     ]
   );
 
+  const clearPauseTimeout = useCallback(() => {
+    if (pauseTimeoutRef.current !== null) {
+      if (typeof window !== "undefined") {
+        window.clearTimeout(pauseTimeoutRef.current);
+      }
+      pauseTimeoutRef.current = null;
+    }
+  }, []);
+
   const stopCurrentAudio = useCallback(() => {
     if (audioElementRef.current) {
       audioElementRef.current.onended = null;
@@ -1633,27 +1682,52 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
       window.speechSynthesis.cancel();
       speechUtteranceRef.current = null;
     }
-  }, []);
+    clearPauseTimeout();
+  }, [clearPauseTimeout]);
 
-  const resetVocabularyPlaybackState = useCallback(() => {
-    setIsVocabularyBatchPlaying(false);
-    setCurrentVocabularyAudioId(null);
-  }, []);
+  const stopVocabularyBatchPlayback = useCallback(
+    (options?: { resetIndex?: boolean }) => {
+      vocabularyBatchTokenRef.current += 1;
+      setIsVocabularyBatchPlaying(false);
+      setCurrentVocabularyAudioId(null);
+      if (options?.resetIndex !== false) {
+        vocabularyBatchResumeIndexRef.current = 0;
+      }
+    },
+    []
+  );
 
-  const resetSentencePlaybackState = useCallback(() => {
-    setIsSentenceBatchPlaying(false);
-    setCurrentSentenceAudioId(null);
-  }, []);
+  const stopSentenceBatchPlayback = useCallback(
+    (options?: { resetIndex?: boolean }) => {
+      sentenceBatchTokenRef.current += 1;
+      setIsSentenceBatchPlaying(false);
+      setCurrentSentenceAudioId(null);
+      if (options?.resetIndex !== false) {
+        sentenceBatchResumeIndexRef.current = 0;
+      }
+    },
+    []
+  );
 
   const stopAllPlayback = useCallback(() => {
     stopCurrentAudio();
-    resetVocabularyPlaybackState();
-    resetSentencePlaybackState();
+    stopVocabularyBatchPlayback();
+    stopSentenceBatchPlayback();
   }, [
-    resetSentencePlaybackState,
-    resetVocabularyPlaybackState,
+    stopSentenceBatchPlayback,
+    stopVocabularyBatchPlayback,
     stopCurrentAudio,
   ]);
+
+  const pauseVocabularyBatchPlayback = useCallback(() => {
+    stopCurrentAudio();
+    stopVocabularyBatchPlayback({ resetIndex: false });
+  }, [stopCurrentAudio, stopVocabularyBatchPlayback]);
+
+  const pauseSentenceBatchPlayback = useCallback(() => {
+    stopCurrentAudio();
+    stopSentenceBatchPlayback({ resetIndex: false });
+  }, [stopCurrentAudio, stopSentenceBatchPlayback]);
 
   const handleBackClick = useCallback(() => {
     stopAllPlayback();
@@ -1661,10 +1735,30 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   }, [onBack, stopAllPlayback]);
 
   const playPracticeEntry = useCallback(
-    (entry: PracticeEntry, onFinished?: () => void) => {
+    (
+      entry: PracticeEntry,
+      options?: { onFinished?: () => void; delayMs?: number }
+    ) => {
+      const onFinished = options?.onFinished;
+      const delayMs = options?.delayMs ?? 0;
+
+      const invokeFinished = () => {
+        if (!onFinished) {
+          return;
+        }
+        if (delayMs > 0 && typeof window !== "undefined") {
+          pauseTimeoutRef.current = window.setTimeout(() => {
+            pauseTimeoutRef.current = null;
+            onFinished();
+          }, delayMs);
+        } else {
+          onFinished();
+        }
+      };
+
       const handleDone = () => {
         stopCurrentAudio();
-        onFinished?.();
+        invokeFinished();
       };
 
       if (entry.audioUrl) {
@@ -1695,18 +1789,35 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   );
 
   const playWordAtIndex = useCallback(
-    (index: number) => {
-      if (!lesson?.vocabulary[index]) {
-        resetVocabularyPlaybackState();
+    (index: number, token: number) => {
+      if (token !== vocabularyBatchTokenRef.current) {
         return;
       }
 
-      const entry = lesson.vocabulary[index];
-      setCurrentVocabularyAudioId(entry.id);
+      const entries = lesson?.vocabulary ?? [];
+      if (!entries.length) {
+        stopVocabularyBatchPlayback();
+        return;
+      }
 
-      playPracticeEntry(entry, () => playWordAtIndex(index + 1));
+      if (index < 0 || index >= entries.length) {
+        stopVocabularyBatchPlayback();
+        return;
+      }
+
+      vocabularyBatchResumeIndexRef.current = index;
+
+      const entry = entries[index];
+      setCurrentVocabularyAudioId(entry.id);
+      playPracticeEntry(entry, {
+        onFinished: () => {
+          vocabularyBatchResumeIndexRef.current = index + 1;
+          playWordAtIndex(index + 1, token);
+        },
+        delayMs: vocabularyPauseMsRef.current,
+      });
     },
-    [lesson, playPracticeEntry, resetVocabularyPlaybackState]
+    [lesson, playPracticeEntry, stopVocabularyBatchPlayback]
   );
 
   const handlePlayWord = useCallback(
@@ -1720,7 +1831,9 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
       }
       stopAllPlayback();
       setCurrentVocabularyAudioId(entry.id);
-      playPracticeEntry(entry, () => setCurrentVocabularyAudioId(null));
+      playPracticeEntry(entry, {
+        onFinished: () => setCurrentVocabularyAudioId(null),
+      });
     },
     [lesson, playPracticeEntry, stopAllPlayback]
   );
@@ -1733,7 +1846,9 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
       }
       stopAllPlayback();
       setCurrentSentenceAudioId(sentenceId);
-      playPracticeEntry(sentence, () => setCurrentSentenceAudioId(null));
+      playPracticeEntry(sentence, {
+        onFinished: () => setCurrentSentenceAudioId(null),
+      });
     },
     [playPracticeEntry, sentences, stopAllPlayback]
   );
@@ -1741,7 +1856,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   const handlePracticeEntryCompleted = useCallback(
     (entry: PracticeEntry, proceed: () => void) => {
       stopCurrentAudio();
-      playPracticeEntry(entry, proceed);
+      playPracticeEntry(entry, { onFinished: proceed });
     },
     [playPracticeEntry, stopCurrentAudio]
   );
@@ -1877,53 +1992,115 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
     [ensureEditable, generatedSentenceSuggestions, resolvedLessonId]
   );
 
-  const handleStartVocabularyBatch = useCallback(() => {
-    if (!lesson?.vocabulary.length) {
-      return;
-    }
-    stopAllPlayback();
-    setIsVocabularyBatchPlaying(true);
-    playWordAtIndex(0);
-  }, [lesson, playWordAtIndex, stopAllPlayback]);
-
-  const handleVocabularyBatchToggle = useCallback(() => {
-    if (isVocabularyBatchPlaying) {
-      stopAllPlayback();
-    } else {
-      handleStartVocabularyBatch();
-    }
-  }, [handleStartVocabularyBatch, isVocabularyBatchPlaying, stopAllPlayback]);
-
-  const playSentenceAtIndex = useCallback(
-    (index: number) => {
-      if (!sentences[index]) {
-        resetSentencePlaybackState();
+  const handleStartVocabularyBatch = useCallback(
+    (startIndex?: number) => {
+      const entries = lesson?.vocabulary ?? [];
+      if (!entries.length) {
         return;
       }
 
-      const entry = sentences[index];
-      setCurrentSentenceAudioId(entry.id);
-      playPracticeEntry(entry, () => playSentenceAtIndex(index + 1));
+      const normalizedIndex =
+        typeof startIndex === "number" &&
+        startIndex >= 0 &&
+        startIndex < entries.length
+          ? startIndex
+          : 0;
+
+      stopCurrentAudio();
+      stopSentenceBatchPlayback();
+
+      vocabularyBatchResumeIndexRef.current = normalizedIndex;
+      const token = vocabularyBatchTokenRef.current;
+      setIsVocabularyBatchPlaying(true);
+      playWordAtIndex(normalizedIndex, token);
     },
-    [playPracticeEntry, resetSentencePlaybackState, sentences]
+    [lesson, playWordAtIndex, stopCurrentAudio, stopSentenceBatchPlayback]
   );
 
-  const handleStartSentenceBatch = useCallback(() => {
-    if (!sentences.length) {
+  const handleVocabularyBatchToggle = useCallback(() => {
+    if (isVocabularyBatchPlaying) {
+      pauseVocabularyBatchPlayback();
       return;
     }
-    stopAllPlayback();
-    setIsSentenceBatchPlaying(true);
-    playSentenceAtIndex(0);
-  }, [playSentenceAtIndex, sentences.length, stopAllPlayback]);
+    handleStartVocabularyBatch(vocabularyBatchResumeIndexRef.current);
+  }, [
+    handleStartVocabularyBatch,
+    isVocabularyBatchPlaying,
+    pauseVocabularyBatchPlayback,
+  ]);
+
+  const playSentenceAtIndex = useCallback(
+    (index: number, token: number) => {
+      if (token !== sentenceBatchTokenRef.current) {
+        return;
+      }
+
+      const entries = sentences;
+      if (!entries.length) {
+        stopSentenceBatchPlayback();
+        return;
+      }
+
+      if (index < 0 || index >= entries.length) {
+        stopSentenceBatchPlayback();
+        return;
+      }
+
+      sentenceBatchResumeIndexRef.current = index;
+
+      const entry = entries[index];
+      setCurrentSentenceAudioId(entry.id);
+      playPracticeEntry(entry, {
+        onFinished: () => {
+          sentenceBatchResumeIndexRef.current = index + 1;
+          playSentenceAtIndex(index + 1, token);
+        },
+        delayMs: sentencePauseMsRef.current,
+      });
+    },
+    [playPracticeEntry, sentences, stopSentenceBatchPlayback]
+  );
+
+  const handleStartSentenceBatch = useCallback(
+    (startIndex?: number) => {
+      if (!sentences.length) {
+        return;
+      }
+
+      const normalizedIndex =
+        typeof startIndex === "number" &&
+        startIndex >= 0 &&
+        startIndex < sentences.length
+          ? startIndex
+          : 0;
+
+      stopCurrentAudio();
+      stopVocabularyBatchPlayback();
+
+      sentenceBatchResumeIndexRef.current = normalizedIndex;
+      const token = sentenceBatchTokenRef.current;
+      setIsSentenceBatchPlaying(true);
+      playSentenceAtIndex(normalizedIndex, token);
+    },
+    [
+      playSentenceAtIndex,
+      sentences.length,
+      stopCurrentAudio,
+      stopVocabularyBatchPlayback,
+    ]
+  );
 
   const handleSentenceBatchToggle = useCallback(() => {
     if (isSentenceBatchPlaying) {
-      stopAllPlayback();
-    } else {
-      handleStartSentenceBatch();
+      pauseSentenceBatchPlayback();
+      return;
     }
-  }, [handleStartSentenceBatch, isSentenceBatchPlaying, stopAllPlayback]);
+    handleStartSentenceBatch(sentenceBatchResumeIndexRef.current);
+  }, [
+    handleStartSentenceBatch,
+    isSentenceBatchPlaying,
+    pauseSentenceBatchPlayback,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -2080,6 +2257,13 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
           verificationResults={vocabularyVerificationResults}
           generatingHanziId={generatingVocabularyHanziId}
           reorderingEnabled={canEditLesson}
+          listenPauseMs={vocabularyPauseMs}
+          listenPauseMinMs={LISTEN_PAUSE_MIN_MS}
+          listenPauseMaxMs={LISTEN_PAUSE_MAX_MS}
+          listenPauseStepMs={LISTEN_PAUSE_STEP_MS}
+          onListenPauseChange={setVocabularyPauseMs}
+          onListenButtonClick={handleVocabularyListenButtonClick}
+          showListenControls={isVocabularyListenControlsVisible}
         />
 
         <SentenceSection
@@ -2122,6 +2306,13 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
           generatingHanziId={generatingSentenceHanziId}
           audioVoices={sentenceAudioVoices}
           reorderingEnabled={canEditLesson}
+          listenPauseMs={sentencePauseMs}
+          listenPauseMinMs={LISTEN_PAUSE_MIN_MS}
+          listenPauseMaxMs={LISTEN_PAUSE_MAX_MS}
+          listenPauseStepMs={LISTEN_PAUSE_STEP_MS}
+          onListenPauseChange={setSentencePauseMs}
+          onListenButtonClick={handleSentenceListenButtonClick}
+          showListenControls={isSentenceListenControlsVisible}
         />
 
         {canEditLesson && (

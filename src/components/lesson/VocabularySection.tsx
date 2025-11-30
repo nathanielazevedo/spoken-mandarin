@@ -7,8 +7,10 @@ import {
 import {
   Alert,
   Badge,
+  Box,
   IconButton,
   InputAdornment,
+  Slider,
   Stack,
   TextField,
   Tooltip,
@@ -18,6 +20,8 @@ import {
   Psychology as PracticeIcon,
   VolumeUp as VolumeIcon,
   StopCircle as StopIcon,
+  PlayArrow as PlayIcon,
+  Pause as PauseIcon,
   AddCircleOutline as AddIcon,
   Search as SearchIcon,
   Clear as ClearIcon,
@@ -66,6 +70,7 @@ export interface VocabularySectionProps {
   isSavingOrder: boolean;
   isBatchPlaying: boolean;
   onBatchToggle: () => void;
+  onListenButtonClick: () => void;
   onPracticeClick: () => void;
   onAddWordClick?: () => void;
   onFlashcardsClick: () => void;
@@ -98,6 +103,12 @@ export interface VocabularySectionProps {
   >;
   onGenerateHanzi?: (id: string) => Promise<void> | void;
   generatingHanziId?: string | null;
+  listenPauseMs?: number;
+  listenPauseMinMs?: number;
+  listenPauseMaxMs?: number;
+  listenPauseStepMs?: number;
+  onListenPauseChange?: (value: number) => void;
+  showListenControls?: boolean;
 }
 
 export const VocabularySection: React.FC<VocabularySectionProps> = ({
@@ -119,6 +130,7 @@ export const VocabularySection: React.FC<VocabularySectionProps> = ({
   isSavingOrder,
   isBatchPlaying,
   onBatchToggle,
+  onListenButtonClick,
   onPracticeClick,
   onAddWordClick,
   currentAudioId,
@@ -144,6 +156,12 @@ export const VocabularySection: React.FC<VocabularySectionProps> = ({
   verificationResults,
   onGenerateHanzi,
   generatingHanziId,
+  listenPauseMs,
+  listenPauseMinMs,
+  listenPauseMaxMs,
+  listenPauseStepMs,
+  onListenPauseChange,
+  showListenControls = false,
 }) => {
   const generateAudioLabel = isGeneratingMissingAudio
     ? "Generating audio..."
@@ -159,15 +177,23 @@ export const VocabularySection: React.FC<VocabularySectionProps> = ({
   const showGenerateAudioAction = Boolean(onGenerateMissingAudio);
   const showGenerateHanziAction = Boolean(onGenerateMissingHanzi);
   const hasBulkActions = showGenerateAudioAction || showGenerateHanziAction;
+  const showListenPauseControl =
+    showListenControls &&
+    typeof listenPauseMs === "number" &&
+    Boolean(onListenPauseChange);
+  const listenPauseLabelSeconds =
+    typeof listenPauseMs === "number"
+      ? (listenPauseMs / 1000).toFixed(1)
+      : "0.0";
 
   return (
     <PracticeSection
       title="Vocabulary"
       subtitle={`${vocabulary.length} words`}
       listenButton={{
-        label: isBatchPlaying ? "Stop audio" : "Listen to deck",
-        icon: isBatchPlaying ? <StopIcon /> : <VolumeIcon />,
-        onClick: onBatchToggle,
+        label: showListenControls ? "Hide listen controls" : "Listen to deck",
+        icon: showListenControls ? <StopIcon /> : <VolumeIcon />,
+        onClick: onListenButtonClick,
         disabled: !vocabulary.length,
       }}
       practiceButton={{
@@ -188,6 +214,54 @@ export const VocabularySection: React.FC<VocabularySectionProps> = ({
       }
       infoMessage={
         reorderingEnabled && isSavingOrder ? "Saving new order..." : null
+      }
+      listenControls={
+        showListenPauseControl && onListenPauseChange ? (
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1.5}
+            alignItems={{ xs: "stretch", sm: "center" }}
+            sx={{ width: "100%" }}
+          >
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="caption" color="text.secondary">
+                Pause {listenPauseLabelSeconds}s between words
+              </Typography>
+              <Slider
+                size="small"
+                value={listenPauseMs}
+                min={listenPauseMinMs ?? 0}
+                max={listenPauseMaxMs ?? 3000}
+                step={listenPauseStepMs ?? 100}
+                onChange={(_, value) => {
+                  if (typeof value === "number") {
+                    onListenPauseChange(value);
+                  }
+                }}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(value) => `${(value / 1000).toFixed(1)}s`}
+              />
+            </Box>
+            <Tooltip title={isBatchPlaying ? "Pause deck" : "Play deck"}>
+              <span>
+                <IconButton
+                  color="primary"
+                  onClick={onBatchToggle}
+                  disabled={!vocabulary.length}
+                  aria-label={isBatchPlaying ? "Pause deck" : "Play deck"}
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    width: 48,
+                    height: 48,
+                  }}
+                >
+                  {isBatchPlaying ? <PauseIcon /> : <PlayIcon />}
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
+        ) : undefined
       }
       extraActions={
         hasBulkActions ? (
