@@ -55,12 +55,21 @@ export async function GET(
           audioUrl: v.audioUrl,
         })
       ),
-      sentences: lesson.sentences.map((s: { id: string; pinyin: string; english: string; audioUrl: string | null }) => ({
-        id: s.id,
-        pinyin: s.pinyin,
-        english: s.english,
-        audioUrl: s.audioUrl,
-      })),
+      sentences: lesson.sentences.map(
+        (s: {
+          id: string;
+          pinyin: string;
+          english: string;
+          audioUrl: string | null;
+          hanzi?: string | null;
+        }) => ({
+          id: s.id,
+          pinyin: s.pinyin,
+          english: s.english,
+          hanzi: s.hanzi ?? undefined,
+          audioUrl: s.audioUrl,
+        })
+      ),
     };
 
     return NextResponse.json(transformed);

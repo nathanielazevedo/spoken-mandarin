@@ -39,6 +39,7 @@ model Sentence {
   lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   pinyin   String
   english  String
+  hanzi    String?
   audioUrl String?
   order    Int     @default(0)
 

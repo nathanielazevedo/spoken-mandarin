@@ -11,6 +11,7 @@ import {
   Psychology as PracticeIcon,
   AddCircleOutline as AddIcon,
   GraphicEq as AudioWaveIcon,
+  Translate as TranslateIcon,
 } from "@mui/icons-material";
 import type { PracticeEntry } from "../../types/lesson";
 import { PracticeSection } from "./PracticeSection";
@@ -36,9 +37,15 @@ export interface SentenceSectionProps {
   missingAudioCount?: number;
   isGeneratingMissingAudio?: boolean;
   onGenerateMissingAudio?: () => void;
+  missingHanziCount?: number;
+  isGeneratingMissingHanzi?: boolean;
+  onGenerateMissingHanzi?: () => void;
   onPlaySentence: (sentenceId: string) => void;
   onDeleteSentence?: (sentenceId: string) => void;
   onRegenerateAudio?: (sentenceId: string) => void;
+  onGenerateHanzi?: (sentenceId: string) => void;
+  generatingHanziId?: string | null;
+  audioVoices?: Record<string, string>;
   reorderingEnabled?: boolean;
 }
 
@@ -59,9 +66,15 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
   missingAudioCount,
   isGeneratingMissingAudio,
   onGenerateMissingAudio,
+  missingHanziCount,
+  isGeneratingMissingHanzi,
+  onGenerateMissingHanzi,
   onPlaySentence,
   onDeleteSentence,
   onRegenerateAudio,
+  onGenerateHanzi,
+  generatingHanziId,
+  audioVoices,
   reorderingEnabled = true,
 }) => {
   const generateAudioLabel = isGeneratingMissingAudio
@@ -69,6 +82,11 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
     : missingAudioCount && missingAudioCount > 0
     ? `Generate audio (${missingAudioCount})`
     : "Generate missing audio";
+  const generateHanziLabel = isGeneratingMissingHanzi
+    ? "Generating hanzi..."
+    : missingHanziCount && missingHanziCount > 0
+    ? `Generate hanzi (${missingHanziCount})`
+    : "Generate missing hanzi";
 
   return (
     <PracticeSection
@@ -131,6 +149,36 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
               </span>
             </Tooltip>
           )}
+          {onGenerateMissingHanzi && (
+            <Tooltip title={generateHanziLabel} key="generate-hanzi">
+              <span>
+                <IconButton
+                  color="primary"
+                  onClick={onGenerateMissingHanzi}
+                  disabled={
+                    isGeneratingMissingHanzi ||
+                    !missingHanziCount ||
+                    !sentences.length
+                  }
+                  aria-label="Generate missing hanzi"
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    width: 48,
+                    height: 48,
+                  }}
+                >
+                  {missingHanziCount && missingHanziCount > 0 ? (
+                    <Badge color="secondary" badgeContent={missingHanziCount}>
+                      <TranslateIcon />
+                    </Badge>
+                  ) : (
+                    <TranslateIcon />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
         </Stack>
       }
     >
@@ -173,6 +221,13 @@ export const SentenceSection: React.FC<SentenceSectionProps> = ({
                       ? () => onRegenerateAudio(sentence.id)
                       : undefined
                   }
+                  onGenerateHanzi={
+                    onGenerateHanzi
+                      ? () => onGenerateHanzi(sentence.id)
+                      : undefined
+                  }
+                  isGeneratingHanzi={generatingHanziId === sentence.id}
+                  audioVoice={audioVoices?.[sentence.id]}
                 />
               ))}
             </Stack>

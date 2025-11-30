@@ -110,6 +110,9 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   const [vocabularyAudioVoices, setVocabularyAudioVoices] = useState<
     Record<string, string>
   >({});
+  const [sentenceAudioVoices, setSentenceAudioVoices] = useState<
+    Record<string, string>
+  >({});
   const [updatingVocabularyId, setUpdatingVocabularyId] = useState<
     string | null
   >(null);
@@ -118,6 +121,9 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   >(null);
   const [generatingVocabularyHanziId, setGeneratingVocabularyHanziId] =
     useState<string | null>(null);
+  const [generatingSentenceHanziId, setGeneratingSentenceHanziId] = useState<
+    string | null
+  >(null);
   const [vocabularyVerificationResults, setVocabularyVerificationResults] =
     useState<
       Record<
@@ -131,6 +137,8 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   const [isGeneratingAllVocabularyAudio, setIsGeneratingAllVocabularyAudio] =
     useState(false);
   const [isGeneratingAllSentenceAudio, setIsGeneratingAllSentenceAudio] =
+    useState(false);
+  const [isGeneratingAllSentenceHanzi, setIsGeneratingAllSentenceHanzi] =
     useState(false);
   const [isGeneratingAllVocabularyHanzi, setIsGeneratingAllVocabularyHanzi] =
     useState(false);
@@ -191,6 +199,9 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   }, [vocabularyList]);
   const missingSentenceAudioCount = useMemo(() => {
     return sentences.filter((entry) => !entry.audioUrl).length;
+  }, [sentences]);
+  const missingSentenceHanziCount = useMemo(() => {
+    return sentences.filter((entry) => !entry.hanzi?.trim()).length;
   }, [sentences]);
   const resolvedLessonId = lesson?.id ?? lessonId ?? null;
 
@@ -597,6 +608,53 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
     [ensureEditable]
   );
 
+  const handleGenerateSentenceHanzi = useCallback(
+    async (sentenceId: string) => {
+      if (!ensureEditable()) {
+        return;
+      }
+
+      setActionError(null);
+      setGeneratingSentenceHanziId(sentenceId);
+
+      try {
+        const response = await fetch(`/api/sentences/${sentenceId}/hanzi`, {
+          method: "POST",
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to generate hanzi");
+        }
+
+        const data = await response.json().catch(() => ({}));
+        const hanzi = typeof data.hanzi === "string" ? data.hanzi.trim() : "";
+
+        if (!hanzi) {
+          throw new Error("Missing hanzi in response");
+        }
+
+        setLesson((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            sentences: prev.sentences.map((entry) =>
+              entry.id === sentenceId ? { ...entry, hanzi } : entry
+            ),
+          };
+        });
+      } catch (err) {
+        console.error("Failed to generate sentence hanzi", err);
+        setActionError(
+          (err as Error).message || "Failed to generate sentence hanzi"
+        );
+      } finally {
+        setGeneratingSentenceHanziId(null);
+      }
+    },
+    [ensureEditable]
+  );
+
   const handleVerifyVocabularyPinyin = useCallback(
     async (vocabId: string) => {
       if (!ensureEditable()) {
@@ -720,6 +778,8 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
         }
 
         const data = await response.json();
+        const normalizedVoice =
+          typeof data.voice === "string" ? data.voice.trim() : "";
         setLesson((prev) => {
           if (!prev) return prev;
           return {
@@ -731,6 +791,11 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
             ),
           };
         });
+        setSentenceAudioVoices((prev) =>
+          normalizedVoice
+            ? { ...prev, [sentenceId]: normalizedVoice }
+            : omitKey(prev, sentenceId)
+        );
       } catch (err) {
         console.error("Failed to generate sentence audio", err);
         setActionError((err as Error).message || "Failed to generate audio");
@@ -809,6 +874,28 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
     }
   }, [ensureEditable, handleGenerateSentenceAudio, sentences]);
 
+  const handleGenerateMissingSentenceHanzi = useCallback(async () => {
+    const missingEntries = sentences.filter((entry) => !entry.hanzi?.trim());
+    if (!missingEntries.length) {
+      return;
+    }
+
+    if (!ensureEditable()) {
+      return;
+    }
+
+    setActionError(null);
+    setIsGeneratingAllSentenceHanzi(true);
+
+    try {
+      for (const entry of missingEntries) {
+        await handleGenerateSentenceHanzi(entry.id);
+      }
+    } finally {
+      setIsGeneratingAllSentenceHanzi(false);
+    }
+  }, [ensureEditable, handleGenerateSentenceHanzi, sentences]);
+
   const handleDeleteSentence = useCallback(
     async (sentenceId: string) => {
       if (!ensureEditable()) {
@@ -835,6 +922,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
             ),
           };
         });
+        setSentenceAudioVoices((prev) => omitKey(prev, sentenceId));
       } catch (err) {
         console.error("Failed to delete sentence", err);
         setActionError((err as Error).message || "Failed to delete sentence");
@@ -2018,11 +2106,21 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
           onGenerateMissingAudio={
             canEditLesson ? handleGenerateMissingSentenceAudio : undefined
           }
+          missingHanziCount={missingSentenceHanziCount}
+          isGeneratingMissingHanzi={isGeneratingAllSentenceHanzi}
+          onGenerateMissingHanzi={
+            canEditLesson ? handleGenerateMissingSentenceHanzi : undefined
+          }
           onPlaySentence={handlePlaySentence}
           onDeleteSentence={canEditLesson ? handleDeleteSentence : undefined}
           onRegenerateAudio={
             canEditLesson ? handleGenerateSentenceAudio : undefined
           }
+          onGenerateHanzi={
+            canEditLesson ? handleGenerateSentenceHanzi : undefined
+          }
+          generatingHanziId={generatingSentenceHanziId}
+          audioVoices={sentenceAudioVoices}
           reorderingEnabled={canEditLesson}
         />
 
