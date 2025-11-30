@@ -23,6 +23,7 @@ import { AddVocabularyDialog } from "./lesson/dialogs/AddVocabularyDialog";
 import { AddSentenceDialog } from "./lesson/dialogs/AddSentenceDialog";
 import { BulkUploadDialog } from "./lesson/dialogs/BulkUploadDialog";
 import { normalizePinyinWord } from "../utils/pinyin";
+import { isLocalEnvironment } from "../utils/environment";
 
 const applyPracticeOrder = <T extends PracticeEntry>(
   entries: T[],
@@ -167,43 +168,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   }, [sentences]);
   const resolvedLessonId = lesson?.id ?? lessonId ?? null;
 
-  const canEditLesson = useMemo(() => {
-    const globalProcess =
-      typeof globalThis !== "undefined"
-        ? (
-            globalThis as {
-              process?: { env?: Record<string, string | undefined> };
-            }
-          ).process
-        : undefined;
-
-    const isDevBuild =
-      (typeof import.meta !== "undefined" &&
-        (
-          import.meta as ImportMeta & {
-            env?: { DEV?: boolean };
-          }
-        ).env?.DEV) ||
-      (globalProcess?.env?.NODE_ENV &&
-        globalProcess.env.NODE_ENV !== "production");
-
-    if (isDevBuild) {
-      return true;
-    }
-    if (typeof window === "undefined") {
-      return false;
-    }
-    const host = window.location.hostname;
-    if (!host) {
-      return false;
-    }
-    return (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host === "::1" ||
-      host.endsWith(".local")
-    );
-  }, []);
+  const canEditLesson = useMemo(() => isLocalEnvironment(), []);
 
   const ensureEditable = useCallback(() => {
     if (canEditLesson) {

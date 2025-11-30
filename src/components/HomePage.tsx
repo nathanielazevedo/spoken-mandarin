@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   CircularProgress,
@@ -13,6 +13,7 @@ import {
   Stack,
 } from "@mui/material";
 import { LessonCard } from "./LessonCard";
+import { isLocalEnvironment } from "../utils/environment";
 
 interface LessonSummary {
   id: string;
@@ -32,6 +33,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onLessonClick }) => {
   const [newLessonTitle, setNewLessonTitle] = useState("");
   const [isCreatingLesson, setIsCreatingLesson] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const canCreateLessons = useMemo(() => isLocalEnvironment(), []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -86,6 +88,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onLessonClick }) => {
   };
 
   const handleOpenCreateDialog = () => {
+    if (!canCreateLessons) {
+      return;
+    }
     setCreateError(null);
     setNewLessonTitle("");
     setIsCreateDialogOpen(true);
@@ -100,6 +105,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onLessonClick }) => {
   };
 
   const handleCreateLesson = async () => {
+    if (!canCreateLessons) {
+      return;
+    }
     const trimmedTitle = newLessonTitle.trim();
     if (!trimmedTitle) {
       setCreateError("Please enter a lesson name");
@@ -175,13 +183,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onLessonClick }) => {
               Manage and practice your lesson library
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            onClick={handleOpenCreateDialog}
-            sx={{ alignSelf: { xs: "stretch", sm: "center" } }}
-          >
-            Create Lesson
-          </Button>
+          {canCreateLessons && (
+            <Button
+              variant="contained"
+              onClick={handleOpenCreateDialog}
+              sx={{ alignSelf: { xs: "stretch", sm: "center" } }}
+            >
+              Create Lesson
+            </Button>
+          )}
         </Stack>
 
         {isLoading && (
@@ -219,37 +229,42 @@ export const HomePage: React.FC<HomePageProps> = ({ onLessonClick }) => {
         ))}
       </Box>
 
-      <Dialog
-        open={isCreateDialogOpen}
-        onClose={handleCloseCreateDialog}
-        fullWidth
-      >
-        <DialogTitle>Create a lesson</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <TextField
-            label="Lesson name"
-            value={newLessonTitle}
-            onChange={(event) => setNewLessonTitle(event.target.value)}
-            autoFocus
-            fullWidth
-            disabled={isCreatingLesson}
-            helperText={createError}
-            error={Boolean(createError)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseCreateDialog} disabled={isCreatingLesson}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleCreateLesson}
-            variant="contained"
-            disabled={isCreatingLesson}
-          >
-            {isCreatingLesson ? "Creating..." : "Create"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {canCreateLessons && (
+        <Dialog
+          open={isCreateDialogOpen}
+          onClose={handleCloseCreateDialog}
+          fullWidth
+        >
+          <DialogTitle>Create a lesson</DialogTitle>
+          <DialogContent sx={{ pt: 2 }}>
+            <TextField
+              label="Lesson name"
+              value={newLessonTitle}
+              onChange={(event) => setNewLessonTitle(event.target.value)}
+              autoFocus
+              fullWidth
+              disabled={isCreatingLesson}
+              helperText={createError}
+              error={Boolean(createError)}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={handleCloseCreateDialog}
+              disabled={isCreatingLesson}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateLesson}
+              variant="contained"
+              disabled={isCreatingLesson}
+            >
+              {isCreatingLesson ? "Creating..." : "Create"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Box>
   );
 };
