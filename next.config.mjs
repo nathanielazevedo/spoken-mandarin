@@ -26,6 +26,20 @@ export default withPWA({
   workboxOptions: {
     runtimeCaching: [
       {
+        urlPattern: ({ request, url }) =>
+          request.mode === 'navigate' ||
+          url.pathname === '/' ||
+          url.pathname.startsWith('/lesson/'),
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'pages-cache',
+          networkTimeoutSeconds: 3,
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+      {
         urlPattern: /\.(?:png|jpg|jpeg|gif|svg|webp|ico)$/i,
         handler: 'CacheFirst',
         options: {

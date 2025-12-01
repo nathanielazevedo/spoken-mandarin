@@ -40,3 +40,5 @@ tmp/
 *.sw?
 
 /src/generated/prisma
+public/sw.js
+public/workbox-*.js
