@@ -1,15 +1,7 @@
 const CACHE_NAME = 'mandarin-app-v1';
 
-const PRECACHE_URLS = [
-  '/',
-  '/manifest.json',
-];
-
-// Install: cache shell
+// Install: skip precaching, let runtime caching handle it
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
-  );
   self.skipWaiting();
 });
 
@@ -18,7 +10,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys.filter((key) => key !== CACHE_NAME && !key.startsWith('mandarin-app')).map((key) => caches.delete(key))
       )
     )
   );
