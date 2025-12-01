@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -23,7 +17,6 @@ import {
   Pause as PauseIcon,
   PlayArrow as PlayIcon,
   RestartAlt as RestartIcon,
-  VolumeUpRounded as VolumeIcon,
 } from "@mui/icons-material";
 import type { PracticeEntry } from "../types/lesson";
 import { normalizePinyin } from "../utils/pinyin";
@@ -33,11 +26,9 @@ interface VocabularyPracticeProps {
   onClose: () => void;
   itemLabel?: string;
   onEntryCompleted?: (entry: PracticeEntry, proceed: () => void) => void;
-  sentenceMatches?: Record<string, PracticeEntry[]>;
 }
 
 const TIME_LIMIT_SECONDS = 15;
-const RETRY_SUCCESS_TARGET = 5;
 
 const clampIndexValue = (value: number, max: number): number => {
   if (!max) {
@@ -57,7 +48,6 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   onClose,
   itemLabel = "words",
   onEntryCompleted,
-  sentenceMatches,
 }) => {
   const baseVocabulary = useMemo(() => vocabulary.slice(), [vocabulary]);
   const totalVocabularyCount = baseVocabulary.length;
@@ -82,9 +72,12 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [overallSeconds, setOverallSeconds] = useState(0);
   const [isOverallRunning, setIsOverallRunning] = useState(false);
+  const [missedWords, setMissedWords] = useState<PracticeEntry[]>([]);
+  const [reviewRound, setReviewRound] = useState(0);
   const [retryMode, setRetryMode] = useState(false);
   const [retrySuccessCount, setRetrySuccessCount] = useState(0);
-  const sentenceAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const RETRY_TARGET = 5;
 
   const currentWord = activeVocabulary[currentIndex] ?? null;
   const progress = sessionTotal
@@ -152,8 +145,8 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     resetForCurrentWord();
     setIsOverallRunning(true);
     setIsPaused(false);
-    setRetryMode(false);
-    setRetrySuccessCount(0);
+    setMissedWords([]);
+    setReviewRound(0);
   }, [
     baseVocabulary,
     rangeEnd,
@@ -161,6 +154,20 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     resetForCurrentWord,
     totalVocabularyCount,
   ]);
+
+  const startMissedWordsReview = useCallback(() => {
+    if (missedWords.length === 0) return;
+
+    setActiveVocabulary([...missedWords]);
+    setSessionTotal(missedWords.length);
+    setCurrentIndex(0);
+    setCompleted(false);
+    resetForCurrentWord();
+    setIsOverallRunning(true);
+    setIsPaused(false);
+    setMissedWords([]);
+    setReviewRound((prev) => prev + 1);
+  }, [missedWords, resetForCurrentWord]);
 
   const moveToNext = useCallback(() => {
     if (!hasSessionStarted || completed) {
@@ -200,48 +207,45 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     const isCorrect =
       normalizePinyin(userInput) === normalizePinyin(currentWord.pinyin);
 
+    // Handle retry mode
     if (retryMode) {
       if (!isCorrect) {
+        // Wrong during retry - reset counter and try again
         setRetrySuccessCount(0);
         setUserInput("");
         setTimeLeft(TIME_LIMIT_SECONDS);
-        setTimeUp(false);
         return;
       }
 
+      // Correct during retry
       const nextCount = retrySuccessCount + 1;
       setRetrySuccessCount(nextCount);
       setUserInput("");
       setTimeLeft(TIME_LIMIT_SECONDS);
-      setTimeUp(false);
 
-      const playWordAudio = (after?: () => void) => {
-        if (onEntryCompleted) {
-          onEntryCompleted(currentWord, after ?? (() => {}));
-        } else if (after) {
-          after();
-        }
-      };
+      // Play audio if available
+      if (onEntryCompleted) {
+        onEntryCompleted(currentWord, () => {});
+      }
 
-      if (nextCount >= RETRY_SUCCESS_TARGET) {
-        const restart = () => {
-          setRetryMode(false);
-          setRevealed(false);
-          setIsOverallRunning(false);
-          startPractice();
-        };
-        playWordAudio(restart);
-      } else {
-        playWordAudio();
+      // After 5 correct retries, move to next word
+      if (nextCount >= RETRY_TARGET) {
+        setRetryMode(false);
+        setRetrySuccessCount(0);
+        setRevealed(false);
+        setIsOverallRunning(true);
+        moveToNext();
       }
       return;
     }
 
+    // Normal mode - wrong answer
     if (!isCorrect) {
       handleFailure();
       return;
     }
 
+    // Normal mode - correct answer
     setRevealed(true);
 
     const proceed = () => {
@@ -276,20 +280,25 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     if (!hasSessionStarted || completed || !currentWord) {
       return;
     }
+    // Track this word as missed (avoid duplicates)
+    setMissedWords((prev) => {
+      if (prev.some((w) => w.id === currentWord.id)) {
+        return prev;
+      }
+      return [...prev, currentWord];
+    });
+    // Enter retry mode - user must type it correctly 5 times
     setRevealed(true);
-    setIsLocked(false);
-    setTimeUp(false);
-    setTimeLeft(TIME_LIMIT_SECONDS);
     setRetryMode(true);
     setRetrySuccessCount(0);
     setUserInput("");
+    setTimeLeft(TIME_LIMIT_SECONDS);
+    setTimeUp(false);
     setIsOverallRunning(false);
   }, [completed, currentWord, hasSessionStarted]);
 
   const handleSkipRetry = useCallback(() => {
-    if (!retryMode) {
-      return;
-    }
+    if (!retryMode) return;
     setRetryMode(false);
     setRetrySuccessCount(0);
     setRevealed(false);
@@ -403,42 +412,6 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   const disableControls = !hasSessionStarted;
   const timerChipColor =
     timeLeft <= 5 && !isPaused ? "error" : isPaused ? "warning" : "default";
-  const matchedSentences = useMemo(() => {
-    if (!sentenceMatches || !currentWord) {
-      return [] as PracticeEntry[];
-    }
-    return sentenceMatches[currentWord.id] ?? [];
-  }, [currentWord, sentenceMatches]);
-  const exampleSentence = matchedSentences[0];
-  const retryRemaining = Math.max(0, RETRY_SUCCESS_TARGET - retrySuccessCount);
-
-  const handlePlaySentenceAudio = useCallback((audioUrl?: string) => {
-    if (!audioUrl) {
-      return;
-    }
-    try {
-      if (sentenceAudioRef.current) {
-        sentenceAudioRef.current.pause();
-        sentenceAudioRef.current = null;
-      }
-      const audio = new Audio(audioUrl);
-      sentenceAudioRef.current = audio;
-      audio.play().catch(() => {
-        /* ignore play errors */
-      });
-    } catch {
-      // Ignore audio errors
-    }
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (sentenceAudioRef.current) {
-        sentenceAudioRef.current.pause();
-        sentenceAudioRef.current = null;
-      }
-    };
-  }, []);
 
   return (
     <Box
@@ -515,7 +488,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
           >
             {hasSessionStarted && retryMode ? (
               <Chip
-                label={`Retry ${retrySuccessCount}/${RETRY_SUCCESS_TARGET}`}
+                label={`Retry ${retrySuccessCount}/${RETRY_TARGET}`}
                 color="warning"
                 variant="outlined"
                 size="small"
@@ -529,25 +502,33 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                       variant="outlined"
                       size="small"
                     />
+                    {missedWords.length > 0 && !completed && (
+                      <Chip
+                        label={`${missedWords.length} missed`}
+                        color="warning"
+                        variant="outlined"
+                        size="small"
+                      />
+                    )}
                   </Stack>
                 )}
-                {hasSessionStarted && (
-                  <Chip
-                    label={formattedOverallTime}
-                    variant={completed ? "filled" : "outlined"}
-                    color={completed ? "success" : "default"}
-                    size="small"
-                  />
-                )}
-                {hasSessionStarted && (
-                  <Chip
-                    label={isPaused ? "Paused" : `${timeLeft}s`}
-                    color={timerChipColor}
-                    variant="outlined"
-                    size="small"
-                  />
-                )}
               </>
+            )}
+            {hasSessionStarted && (
+              <Chip
+                label={formattedOverallTime}
+                variant={completed ? "filled" : "outlined"}
+                color={completed ? "success" : "default"}
+                size="small"
+              />
+            )}
+            {hasSessionStarted && !completed && !retryMode && (
+              <Chip
+                label={isPaused ? "Paused" : `${timeLeft}s`}
+                color={timerChipColor}
+                variant="outlined"
+                size="small"
+              />
             )}
           </Stack>
         </Stack>
@@ -632,16 +613,58 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
 
           {hasSessionStarted && completed && (
             <Stack spacing={2} textAlign="center">
-              <Typography variant="h5" color="success.main">
-                Perfect run complete
-              </Typography>
-              <Typography color="text.secondary">
-                You cleared {practicedCount} {itemLabel}
-                {sessionRange.start > 0 && sessionRange.end > 0
-                  ? ` (range ${sessionRange.start}-${sessionRange.end})`
-                  : ""}
-                {practicedCount > 0 ? ` in ${formattedOverallTime}` : "."}
-              </Typography>
+              {missedWords.length === 0 ? (
+                <>
+                  <Typography variant="h5" color="success.main">
+                    {reviewRound > 0
+                      ? "All words mastered!"
+                      : "Perfect run complete"}
+                  </Typography>
+                  <Typography color="text.secondary">
+                    You cleared {practicedCount} {itemLabel}
+                    {sessionRange.start > 0 &&
+                    sessionRange.end > 0 &&
+                    reviewRound === 0
+                      ? ` (range ${sessionRange.start}-${sessionRange.end})`
+                      : ""}
+                    {practicedCount > 0 ? ` in ${formattedOverallTime}` : "."}
+                    {reviewRound > 0 &&
+                      ` after ${reviewRound} review round${
+                        reviewRound > 1 ? "s" : ""
+                      }.`}
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <Typography variant="h5" color="warning.main">
+                    Round complete
+                  </Typography>
+                  <Typography color="text.secondary">
+                    You missed {missedWords.length}{" "}
+                    {itemLabel === "words"
+                      ? missedWords.length === 1
+                        ? "word"
+                        : "words"
+                      : itemLabel}
+                    .{reviewRound > 0 && ` (Review round ${reviewRound})`}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={startMissedWordsReview}
+                    color="warning"
+                  >
+                    Review missed {itemLabel} ({missedWords.length})
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    onClick={startPractice}
+                  >
+                    Start over
+                  </Button>
+                </>
+              )}
             </Stack>
           )}
 
@@ -674,7 +697,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
               <TextField
                 fullWidth
                 autoFocus
-                label="Type the pinyin"
+                label={retryMode ? "Type it again" : "Type the pinyin"}
                 value={userInput}
                 onChange={(event) => setUserInput(event.target.value)}
                 onKeyDown={handleKeyDown}
@@ -687,7 +710,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                   disabled={!userInput.trim() || timeUp || isLocked || isPaused}
                   fullWidth
                 >
-                  Check answer
+                  {retryMode ? "Submit" : "Check answer"}
                 </Button>
                 {retryMode && (
                   <Stack
@@ -704,46 +727,19 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                       color="warning.main"
                       textAlign="center"
                     >
-                      Type it correctly {retryRemaining} more
-                      {retryRemaining === 1 ? " time" : " times"} to restart the
-                      drill from the beginning.
+                      Type it correctly {RETRY_TARGET - retrySuccessCount} more
+                      {RETRY_TARGET - retrySuccessCount === 1
+                        ? " time"
+                        : " times"}{" "}
+                      to continue.
                     </Typography>
-                    {exampleSentence && (
-                      <Stack spacing={1}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Example sentence
-                        </Typography>
-                        <Typography variant="body1" fontWeight={600}>
-                          {exampleSentence.english}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                          {exampleSentence.pinyin}
-                        </Typography>
-                        {exampleSentence.hanzi && (
-                          <Typography variant="body2" color="text.secondary">
-                            {exampleSentence.hanzi}
-                          </Typography>
-                        )}
-                        <Button
-                          variant="outlined"
-                          startIcon={<VolumeIcon />}
-                          onClick={() =>
-                            handlePlaySentenceAudio(exampleSentence.audioUrl)
-                          }
-                          disabled={!exampleSentence.audioUrl}
-                          sx={{ alignSelf: "flex-start" }}
-                        >
-                          Play sentence audio
-                        </Button>
-                      </Stack>
-                    )}
                     <Button
                       variant="text"
                       color="primary"
                       onClick={handleSkipRetry}
                       sx={{ alignSelf: "flex-end" }}
                     >
-                      Skip extra practice
+                      Skip
                     </Button>
                   </Stack>
                 )}

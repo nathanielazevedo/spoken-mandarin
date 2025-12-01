@@ -65,7 +65,7 @@ export const stripToneMarks = (text: string): string =>
 
 export const normalizePinyin = (text: string): string =>
   stripToneMarks(text)
-    .replace(/[.!?]/g, "")
+    .replace(/[^\w\s]/g, "")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
