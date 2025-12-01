@@ -92,7 +92,19 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
         p: { xs: 2.5, sm: 3 },
         borderRadius: 3,
         backgroundColor: (theme) => theme.palette.background.paper,
+        cursor: "pointer",
+        "&:hover": {
+          backgroundColor: (theme) =>
+            theme.palette.mode === "dark"
+              ? "rgba(255, 255, 255, 0.05)"
+              : "rgba(0, 0, 0, 0.02)",
+        },
       }}
+      onClick={toggleExpanded}
+      onKeyDown={handleHeaderKeyDown}
+      tabIndex={0}
+      role="button"
+      aria-expanded={isExpanded}
     >
       <Stack
         direction={{ xs: "column", md: "row" }}
@@ -102,17 +114,10 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
         sx={{
           mb: 1,
           width: "100%",
-          cursor: "pointer",
         }}
-        onClick={toggleExpanded}
-        onKeyDown={handleHeaderKeyDown}
-        tabIndex={0}
-        role="button"
-        aria-expanded={isExpanded}
       >
         <Box
           sx={{
-            cursor: "pointer",
             width: "100%",
             outline: "none",
           }}
@@ -125,13 +130,13 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
           </Typography>
         </Box>
         <Stack
-          direction={{ xs: "column", sm: "row" }}
+          direction="row"
           spacing={1}
-          flexWrap={{ sm: "wrap" }}
+          flexWrap="wrap"
           sx={{
-            width: "100%",
+            width: { xs: "100%", md: "auto" },
             justifyContent: { xs: "flex-start", md: "flex-end" },
-            alignItems: { xs: "stretch", sm: "center" },
+            alignItems: "center",
             cursor: "default",
           }}
         >
@@ -140,7 +145,6 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
             <Box
               key={`extra-action-${index}`}
               sx={{
-                width: { xs: "100%", sm: "auto" },
                 display: "flex",
                 cursor: "default",
               }}
@@ -153,7 +157,6 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
           {listenControls ? (
             <Box
               sx={{
-                width: { xs: "100%", sm: "auto" },
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "center",
@@ -169,11 +172,19 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
         </Stack>
       </Stack>
       {infoMessage && (
-        <Alert severity="info" sx={{ mt: 2 }}>
+        <Alert
+          severity="info"
+          sx={{ mt: 2 }}
+          onClick={(event) => event.stopPropagation()}
+        >
           {infoMessage}
         </Alert>
       )}
-      <Collapse in={isExpanded} sx={{ mt: 2 }}>
+      <Collapse
+        in={isExpanded}
+        sx={{ mt: 2 }}
+        onClick={(event) => event.stopPropagation()}
+      >
         {children}
       </Collapse>
     </Paper>
