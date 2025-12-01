@@ -34,12 +34,14 @@ self.addEventListener('fetch', (event) => {
       caches.open('audio-cache').then((cache) =>
         cache.match(request).then((cached) => {
           if (cached) return cached;
-          return fetch(request).then((response) => {
-            if (response.ok) {
-              cache.put(request, response.clone());
-            }
-            return response;
-          });
+          return fetch(request)
+            .then((response) => {
+              if (response.ok) {
+                cache.put(request, response.clone());
+              }
+              return response;
+            })
+            .catch(() => cached || new Response('Audio not available offline', { status: 503 }));
         })
       )
     );
@@ -57,7 +59,12 @@ self.addEventListener('fetch', (event) => {
             }
             return response;
           })
-          .catch(() => cache.match(request))
+          .catch(() => cache.match(request).then((cached) => 
+            cached || new Response(JSON.stringify({ error: 'Offline' }), { 
+              status: 503, 
+              headers: { 'Content-Type': 'application/json' } 
+            })
+          ))
       )
     );
     return;
@@ -69,12 +76,14 @@ self.addEventListener('fetch', (event) => {
       caches.open('static-cache').then((cache) =>
         cache.match(request).then((cached) => {
           if (cached) return cached;
-          return fetch(request).then((response) => {
-            if (response.ok) {
-              cache.put(request, response.clone());
-            }
-            return response;
-          });
+          return fetch(request)
+            .then((response) => {
+              if (response.ok) {
+                cache.put(request, response.clone());
+              }
+              return response;
+            })
+            .catch(() => new Response('', { status: 503 }));
         })
       )
     );
@@ -92,14 +101,18 @@ self.addEventListener('fetch', (event) => {
             }
             return response;
           })
-          .catch(() => cache.match(request))
+          .catch(() => cache.match(request).then((cached) =>
+            cached || caches.match('/') || new Response('Offline', { status: 503 })
+          ))
       )
     );
     return;
   }
 
-  // Default: Network First
+  // Default: Network First with fallback
   event.respondWith(
-    fetch(request).catch(() => caches.match(request))
+    fetch(request)
+      .catch(() => caches.match(request))
+      .then((response) => response || new Response('', { status: 503 }))
   );
 });
