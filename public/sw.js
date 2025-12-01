@@ -28,6 +28,26 @@ self.addEventListener('fetch', (event) => {
   // Skip chrome-extension and other non-http(s) requests
   if (!url.protocol.startsWith('http')) return;
 
+  // Manifest: Cache First
+  if (url.pathname === '/manifest.json') {
+    event.respondWith(
+      caches.open('static-cache').then((cache) =>
+        cache.match(request).then((cached) => {
+          if (cached) return cached;
+          return fetch(request)
+            .then((response) => {
+              if (response.ok) {
+                cache.put(request, response.clone());
+              }
+              return response;
+            })
+            .catch(() => new Response('{}', { status: 503, headers: { 'Content-Type': 'application/json' } }));
+        })
+      )
+    );
+    return;
+  }
+
   // Audio files: Cache First
   if (/\.(?:mp3|wav|ogg)$/i.test(url.pathname)) {
     event.respondWith(
