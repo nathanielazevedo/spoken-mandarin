@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
-import path from 'node:path';
-import fs from 'node:fs/promises';
+import { uploadAudioToStorage } from '@/lib/supabase/storage';
 
 const DEFAULT_VOICE = process.env.OPENAI_TTS_VOICE ?? 'alloy';
 const DEFAULT_MODEL = process.env.OPENAI_TTS_MODEL ?? 'gpt-4o-mini-tts';
@@ -85,9 +84,6 @@ export async function POST(
 
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const filename = `${vocab.id}.mp3`;
-    const outputDir = path.join(process.cwd(), 'public', 'audio', 'vocabulary');
-    await fs.mkdir(outputDir, { recursive: true });
-    const filePath = path.join(outputDir, filename);
 
     const selectedVoice = pickRandomVoice();
 
@@ -106,8 +102,9 @@ export async function POST(
     });
 
     const buffer = Buffer.from(await response.arrayBuffer());
-    await fs.writeFile(filePath, buffer);
-    const publicUrl = path.posix.join('/audio', 'vocabulary', filename);
+    
+    // Upload to Supabase Storage
+    const { publicUrl } = await uploadAudioToStorage(buffer, 'vocabulary', filename);
     const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
 
     await prisma.vocabulary.update({
