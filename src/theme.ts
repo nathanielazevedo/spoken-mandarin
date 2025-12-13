@@ -5,15 +5,15 @@ export const chatGPTLightTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#10a37f', // ChatGPT green
-      light: '#26d0ab',
-      dark: '#0d8168',
+      main: '#dc2626',
+      light: '#ef4444',
+      dark: '#b91c1c',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#f7931e', // Accent orange
-      light: '#ffa726',
-      dark: '#e65100',
+      main: '#f97316',
+      light: '#fb923c',
+      dark: '#ea580c',
       contrastText: '#ffffff',
     },
     background: {
@@ -198,13 +198,13 @@ export const chatGPTLightTheme = createTheme({
               borderColor: '#c5c5d2',
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#10a37f',
+              borderColor: '#dc2626',
             },
           },
           '& .MuiInputLabel-root': {
             color: '#6e6e80',
             '&.Mui-focused': {
-              color: '#10a37f',
+              color: '#dc2626',
             },
           },
           '& .MuiOutlinedInput-input': {
@@ -272,15 +272,15 @@ export const chatGPTDarkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#10a37f', // ChatGPT green
-      light: '#26d0ab',
-      dark: '#0d8168',
+      main: '#dc2626',
+      light: '#ef4444',
+      dark: '#b91c1c',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#f7931e', // Accent orange
-      light: '#ffa726',
-      dark: '#e65100',
+      main: '#f97316',
+      light: '#fb923c',
+      dark: '#ea580c',
       contrastText: '#ffffff',
     },
     background: {
@@ -465,13 +465,13 @@ export const chatGPTDarkTheme = createTheme({
               borderColor: '#6b7280',
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#10a37f',
+              borderColor: '#dc2626',
             },
           },
           '& .MuiInputLabel-root': {
             color: '#9ca3af',
             '&.Mui-focused': {
-              color: '#10a37f',
+              color: '#dc2626',
             },
           },
           '& .MuiOutlinedInput-input': {

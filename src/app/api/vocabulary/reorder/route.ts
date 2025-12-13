@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     const orderMap = new Map(vocabEntries.map((entry) => [entry.id, entry.order ?? 0]));
     const updates = vocabularyOrder
       .map((id: string, index: number) => ({ id, order: index }))
-      .filter(({ id, order }) => orderMap.get(id) !== order);
+      .filter(({ id, order }: { id: string; order: number }) => orderMap.get(id) !== order);
 
     if (updates.length === 0) {
       return NextResponse.json({ success: true });
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
       const chunk = updates.slice(i, i + CHUNK_SIZE);
       await prisma.$transaction(
-        chunk.map(({ id, order }) =>
+        chunk.map(({ id, order }: { id: string; order: number }) =>
           prisma.vocabulary.update({
             where: { id },
             data: { order },

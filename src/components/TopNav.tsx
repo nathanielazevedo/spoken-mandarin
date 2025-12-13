@@ -44,7 +44,7 @@ export const TopNav: React.FC<TopNavProps> = ({
             },
           }}
         >
-          Mandarin Spoken
+          Spoken Mandarin
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           {onCreateLesson && (

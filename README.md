@@ -1,8 +1,8 @@
-# Mandarin Spoken
+# Spoken Mandarin
 
 A beautiful, modern Mandarin Chinese learning app built with Next.js and React. Practice vocabulary, sentences, and pronunciation with an elegant glass-morphism UI featuring traditional Chinese-inspired design elements.
 
-![Mandarin Spoken](public/background.svg)
+![Spoken Mandarin](public/background.svg)
 
 ## Features
 

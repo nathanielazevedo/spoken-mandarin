@@ -4,14 +4,14 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "No Nonsense Mandarin",
+  title: "Spoken Mandarin",
   description:
     "No-fuss Mandarin practice with lessons, vocab, and audio drills.",
   themeColor: "#171717",
   manifest: "/manifest.json",
   icons: {
-    icon: "/vite.svg",
-    apple: "/vite.svg",
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
   },
 };
 

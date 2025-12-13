@@ -1,0 +1,54 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg">
+  <!-- Base background -->
+  <rect width="1440" height="900" fill="#F4F4F6"/>
+
+  <defs>
+    <pattern
+      id="hanziPattern"
+      x="0"
+      y="0"
+      width="340"
+      height="120"
+      patternUnits="userSpaceOnUse"
+    >
+      <!-- Row 1 -->
+      <text
+        x="0"
+        y="34"
+        font-size="26"
+        fill="#FFFFFF"
+        opacity="0.98"
+        font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif"
+      >
+        学 说 语 听 话 练 音 调 句 词 课 章
+      </text>
+
+      <!-- Row 2 (staggered) -->
+      <text
+        x="36"
+        y="74"
+        font-size="26"
+        fill="#FFFFFF"
+        opacity="0.85"
+        font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif"
+      >
+        我 你 他 们 是 有 在 不 会 能 要 来 去 看 听
+      </text>
+
+      <!-- Row 3 (staggered opposite) -->
+      <text
+        x="14"
+        y="114"
+        font-size="26"
+        fill="#FFFFFF"
+        opacity="0.72"
+        font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif"
+      >
+        口 发 声 读 写 词 句 练 习 正 确
+      </text>
+    </pattern>
+  </defs>
+
+  <!-- Apply pattern -->
+  <rect width="1440" height="900" fill="url(#hanziPattern)"/>
+</svg>
