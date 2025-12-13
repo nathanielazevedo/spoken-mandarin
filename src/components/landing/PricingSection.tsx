@@ -21,7 +21,10 @@ export function PricingSection({ onGetStarted }: PricingSectionProps) {
         py: 12,
         position: "relative",
         overflow: "hidden",
-        backgroundImage: "url(/haziBackground.svg)",
+        backgroundImage: (theme) =>
+          theme.palette.mode === "dark"
+            ? "url(/hanziBackgroundDark.svg)"
+            : "url(/haziBackground.svg)",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

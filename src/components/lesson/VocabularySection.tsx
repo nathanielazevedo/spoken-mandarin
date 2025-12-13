@@ -28,10 +28,10 @@ import {
 import type { PracticeEntry } from "../../types/lesson";
 import { PracticeSection } from "./PracticeSection";
 import { SortablePracticeCard } from "./SortablePracticeCard";
-import { EditEntryDialog } from "./EditEntryDialog";
-import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
-import { ListenDialog } from "./ListenDialog";
-import { PracticeSpeakingDialog } from "./PracticeSpeakingDialog";
+import { EditEntryDialog } from "./dialogs/EditEntryDialog";
+import { ConfirmDeleteDialog } from "./dialogs/ConfirmDeleteDialog";
+import { ListenDialog } from "./dialogs/ListenDialog";
+import { PracticeSpeakingDialog } from "./dialogs/PracticeSpeakingDialog";
 import { useEntryDialogs } from "../../hooks/useEntryDialogs";
 const STRIP_DIACRITICS_REGEX = /[\u0300-\u036f]/g;
 const toSearchKey = (value: string) =>

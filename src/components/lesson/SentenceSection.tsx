@@ -23,10 +23,10 @@ import {
 import type { PracticeEntry } from "../../types/lesson";
 import { PracticeSection } from "./PracticeSection";
 import { SortablePracticeCard } from "./SortablePracticeCard";
-import { EditEntryDialog } from "./EditEntryDialog";
-import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
-import { ListenDialog } from "./ListenDialog";
-import { PracticeSpeakingDialog } from "./PracticeSpeakingDialog";
+import { EditEntryDialog } from "./dialogs/EditEntryDialog";
+import { ConfirmDeleteDialog } from "./dialogs/ConfirmDeleteDialog";
+import { ListenDialog } from "./dialogs/ListenDialog";
+import { PracticeSpeakingDialog } from "./dialogs/PracticeSpeakingDialog";
 import { useEntryDialogs } from "../../hooks/useEntryDialogs";
 
 type DndSensors = NonNullable<Parameters<typeof DndContext>[0]["sensors"]>;

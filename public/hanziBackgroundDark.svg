@@ -1,10 +1,10 @@
 <svg width="1440" height="900" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg">
   <!-- Base background -->
-  <rect width="1440" height="900" fill="#E8E8EC"/>
+  <rect width="1440" height="900" fill="#0F0F12"/>
 
   <defs>
     <pattern
-      id="hanziPattern"
+      id="hanziPatternDark"
       x="0"
       y="0"
       width="340"
@@ -17,7 +17,7 @@
         y="34"
         font-size="26"
         fill="#FFFFFF"
-        opacity="0.98"
+        opacity="0.04"
         font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif"
       >
         学 说 语 听 话 练 音 调 句 词 课 章
@@ -29,7 +29,7 @@
         y="74"
         font-size="26"
         fill="#FFFFFF"
-        opacity="0.85"
+        opacity="0.06"
         font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif"
       >
         我 你 他 们 是 有 在 不 会 能 要 来 去 看 听
@@ -41,7 +41,7 @@
         y="114"
         font-size="26"
         fill="#FFFFFF"
-        opacity="0.72"
+        opacity="0.08"
         font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif"
       >
         口 发 声 读 写 词 句 练 习 正 确
@@ -50,5 +50,5 @@
   </defs>
 
   <!-- Apply pattern -->
-  <rect width="1440" height="900" fill="url(#hanziPattern)"/>
+  <rect width="1440" height="900" fill="url(#hanziPatternDark)"/>
 </svg>

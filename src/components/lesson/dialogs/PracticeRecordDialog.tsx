@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -13,18 +13,16 @@ import {
   Chip,
   Button,
   Alert,
-  LinearProgress,
 } from "@mui/material";
 import {
   Mic as MicIcon,
   Stop as StopIcon,
   Close as CloseIcon,
+  Refresh as RetryIcon,
   CheckCircle as PassIcon,
   Cancel as FailIcon,
-  NavigateNext as NextIcon,
-  NavigateBefore as PrevIcon,
 } from "@mui/icons-material";
-import type { PracticeEntry } from "../../types/lesson";
+import type { PracticeEntry } from "../../../types/lesson";
 
 export interface ASRResult {
   transcript: string;
@@ -37,47 +35,27 @@ export interface ASRResult {
   mismatches: { index: number; expected: string; received: string }[];
 }
 
-export interface PracticeSpeakingDialogProps {
+export interface PracticeRecordDialogProps {
   open: boolean;
   onClose: () => void;
-  entries: PracticeEntry[];
-  title: string;
+  entry: PracticeEntry | null;
 }
 
-export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
+export const PracticeRecordDialog: React.FC<PracticeRecordDialogProps> = ({
   open,
   onClose,
-  entries,
-  title,
+  entry,
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<ASRResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [completedIndices, setCompletedIndices] = useState<Set<number>>(
-    new Set()
-  );
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const currentEntry = entries[currentIndex];
-  const progress =
-    entries.length > 0 ? ((currentIndex + 1) / entries.length) * 100 : 0;
-  const completedCount = completedIndices.size;
-
-  // Reset state when dialog opens/closes or entries change
-  useEffect(() => {
-    if (open) {
-      setCurrentIndex(0);
-      setCompletedIndices(new Set());
-      resetRecordingState();
-    }
-  }, [open]);
-
-  const resetRecordingState = useCallback(() => {
+  const resetState = useCallback(() => {
     setResult(null);
     setError(null);
     setIsProcessing(false);
@@ -90,18 +68,18 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
   }, []);
 
   const handleClose = useCallback(() => {
-    resetRecordingState();
+    resetState();
     onClose();
-  }, [onClose, resetRecordingState]);
+  }, [onClose, resetState]);
 
   const processAudio = useCallback(
     async (audioBlob: Blob) => {
-      if (!currentEntry) return;
+      if (!entry) return;
 
       try {
         const formData = new FormData();
         formData.append("audio", audioBlob, "recording.webm");
-        formData.append("targetPinyin", currentEntry.pinyin);
+        formData.append("targetPinyin", entry.pinyin);
 
         const response = await fetch("/api/asr", {
           method: "POST",
@@ -115,11 +93,6 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
 
         const data: ASRResult = await response.json();
         setResult(data);
-
-        // Mark as completed if passed
-        if (data.passed) {
-          setCompletedIndices((prev) => new Set([...prev, currentIndex]));
-        }
       } catch (err) {
         console.error("ASR error:", err);
         setError((err as Error).message || "Failed to process audio");
@@ -127,7 +100,7 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
         setIsProcessing(false);
       }
     },
-    [currentEntry, currentIndex]
+    [entry]
   );
 
   const startRecording = useCallback(async () => {
@@ -143,13 +116,14 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
         },
       });
 
+      // Determine supported MIME type
       let mimeType = "audio/webm;codecs=opus";
       if (!MediaRecorder.isTypeSupported(mimeType)) {
         mimeType = "audio/webm";
         if (!MediaRecorder.isTypeSupported(mimeType)) {
           mimeType = "audio/mp4";
           if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = "";
+            mimeType = ""; // Let browser choose default
           }
         }
       }
@@ -167,6 +141,7 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
       };
 
       mediaRecorder.onstop = async () => {
+        // Stop all tracks
         stream.getTracks().forEach((track) => track.stop());
 
         if (audioChunksRef.current.length === 0) {
@@ -189,10 +164,12 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
         await processAudio(audioBlob);
       };
 
+      // Start recording - collect data every 250ms
       mediaRecorder.start(250);
       setIsRecording(true);
       setRecordingDuration(0);
 
+      // Start duration timer
       timerRef.current = setInterval(() => {
         setRecordingDuration((prev) => prev + 100);
       }, 100);
@@ -204,11 +181,13 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
+      // Clear the timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
 
+      // Request any remaining data before stopping
       if (mediaRecorderRef.current.state === "recording") {
         mediaRecorderRef.current.requestData();
       }
@@ -216,27 +195,13 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
       setIsRecording(false);
       setIsProcessing(true);
     }
-  }, [isRecording]);
-
-  const handleNext = useCallback(() => {
-    if (currentIndex < entries.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-      resetRecordingState();
-    }
-  }, [currentIndex, entries.length, resetRecordingState]);
-
-  const handlePrev = useCallback(() => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-      resetRecordingState();
-    }
-  }, [currentIndex, resetRecordingState]);
+  }, [isRecording, recordingDuration]);
 
   const handleRetry = useCallback(() => {
-    resetRecordingState();
-  }, [resetRecordingState]);
+    resetState();
+  }, [resetState]);
 
-  if (!currentEntry) return null;
+  if (!entry) return null;
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -247,22 +212,14 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
           justifyContent: "space-between",
         }}
       >
-        <Box>
-          <Typography variant="h6">{title}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {currentIndex + 1} of {entries.length} • {completedCount} completed
-          </Typography>
-        </Box>
+        <Typography variant="h6">Practice Speaking</Typography>
         <IconButton onClick={handleClose} size="small">
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-
-      <LinearProgress variant="determinate" value={progress} sx={{ mx: 3 }} />
-
       <DialogContent>
         <Stack spacing={3} sx={{ py: 2 }}>
-          {/* Target display */}
+          {/* Target sentence display */}
           <Box
             sx={{
               p: 3,
@@ -272,15 +229,15 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
             }}
           >
             <Typography variant="h4" fontWeight={600} sx={{ mb: 1 }}>
-              {currentEntry.pinyin}
+              {entry.pinyin}
             </Typography>
-            {currentEntry.hanzi && (
+            {entry.hanzi && (
               <Typography variant="h5" color="text.secondary" sx={{ mb: 1 }}>
-                {currentEntry.hanzi}
+                {entry.hanzi}
               </Typography>
             )}
             <Typography variant="body1" color="text.secondary">
-              {currentEntry.english}
+              {entry.english}
             </Typography>
           </Box>
 
@@ -299,6 +256,9 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
                 border: "2px solid",
                 borderColor: result.passed ? "success.main" : "error.main",
                 borderRadius: 2,
+                backgroundColor: result.passed
+                  ? "success.lighter"
+                  : "error.lighter",
               }}
             >
               <Stack spacing={2}>
@@ -340,6 +300,36 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
                       </Typography>
                     )}
                 </Box>
+
+                {result.mismatches.length > 0 && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Differences:
+                    </Typography>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      flexWrap="wrap"
+                      sx={{ mt: 0.5 }}
+                    >
+                      {result.mismatches.map((mismatch, index) => (
+                        <Chip
+                          key={index}
+                          size="small"
+                          label={
+                            mismatch.expected
+                              ? `"${mismatch.received || "—"}" → "${
+                                  mismatch.expected
+                                }"`
+                              : `Extra: "${mismatch.received}"`
+                          }
+                          color="warning"
+                          variant="outlined"
+                        />
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
               </Stack>
             </Box>
           )}
@@ -352,22 +342,7 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
               </Typography>
             )}
 
-            <Stack direction="row" spacing={2} alignItems="center">
-              {/* Previous button */}
-              <IconButton
-                onClick={handlePrev}
-                disabled={currentIndex === 0 || isRecording || isProcessing}
-                sx={{
-                  width: 48,
-                  height: 48,
-                  border: "1px solid",
-                  borderColor: "divider",
-                }}
-              >
-                <PrevIcon />
-              </IconButton>
-
-              {/* Record/Stop button */}
+            <Stack direction="row" spacing={2} justifyContent="center">
               {!result && !isProcessing && (
                 <IconButton
                   onClick={isRecording ? stopRecording : startRecording}
@@ -408,40 +383,15 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
               )}
 
               {result && (
-                <Stack direction="row" spacing={1}>
-                  <Button variant="outlined" onClick={handleRetry} size="large">
-                    Retry
-                  </Button>
-                  {currentIndex < entries.length - 1 && (
-                    <Button
-                      variant="contained"
-                      onClick={handleNext}
-                      endIcon={<NextIcon />}
-                      size="large"
-                    >
-                      Next
-                    </Button>
-                  )}
-                </Stack>
+                <Button
+                  variant="contained"
+                  startIcon={<RetryIcon />}
+                  onClick={handleRetry}
+                  size="large"
+                >
+                  Try Again
+                </Button>
               )}
-
-              {/* Next button */}
-              <IconButton
-                onClick={handleNext}
-                disabled={
-                  currentIndex === entries.length - 1 ||
-                  isRecording ||
-                  isProcessing
-                }
-                sx={{
-                  width: 48,
-                  height: 48,
-                  border: "1px solid",
-                  borderColor: "divider",
-                }}
-              >
-                <NextIcon />
-              </IconButton>
             </Stack>
           </Stack>
 
@@ -453,6 +403,17 @@ export const PracticeSpeakingDialog: React.FC<PracticeSpeakingDialogProps> = ({
               textAlign="center"
             >
               Tap the microphone and speak the phrase above
+            </Typography>
+          )}
+
+          {isRecording && (
+            <Typography
+              variant="body2"
+              color="error.main"
+              textAlign="center"
+              fontWeight={500}
+            >
+              Recording... Tap to stop
             </Typography>
           )}
         </Stack>

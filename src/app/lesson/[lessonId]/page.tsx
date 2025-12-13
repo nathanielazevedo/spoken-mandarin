@@ -10,6 +10,6 @@ export default function Lesson() {
   const lessonId = Array.isArray(rawId) ? rawId[0] : rawId ?? null;
 
   return (
-    <LessonPage lessonId={lessonId} onBack={() => router.push("/lessons")} />
+    <LessonPage lessonId={lessonId} onBack={() => router.push("/curriculum")} />
   );
 }

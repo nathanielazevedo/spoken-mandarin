@@ -16,7 +16,7 @@ import {
   Stop as StopIcon,
   Close as CloseIcon,
 } from "@mui/icons-material";
-import type { PracticeEntry } from "../../types/lesson";
+import type { PracticeEntry } from "../../../types/lesson";
 
 export interface ListenDialogProps {
   open: boolean;

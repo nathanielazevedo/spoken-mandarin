@@ -1,7 +1,6 @@
 import React from "react";
 import {
   Box,
-  Button,
   IconButton,
   Paper,
   Stack,
@@ -12,7 +11,7 @@ import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 
 export interface LessonHeroProps {
   title: string;
-  description: string;
+  description?: string;
   onBackClick: () => void;
   onBulkUploadClick?: () => void;
 }
@@ -39,17 +38,12 @@ export const LessonHero: React.FC<LessonHeroProps> = ({
       justifyContent="space-between"
     >
       <Box>
-        <Button
-          variant="text"
-          onClick={onBackClick}
-          sx={{ px: 0, mb: 1, color: "text.secondary" }}
-        >
-          Back to Lessons
-        </Button>
         <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
           {title}
         </Typography>
-        <Typography color="text.secondary">{description}</Typography>
+        {description && (
+          <Typography color="text.secondary">{description}</Typography>
+        )}
       </Box>
       <Stack
         direction={{ xs: "column", sm: "row" }}

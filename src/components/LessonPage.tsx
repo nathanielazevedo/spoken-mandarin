@@ -564,7 +564,18 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
 
   return (
     <>
-      <TopNav />
+      <TopNav
+        breadcrumb={{
+          program: lesson.program?.name,
+          level: lesson.level
+            ? { order: lesson.level.order, name: lesson.level.name }
+            : undefined,
+          unit: lesson.unit
+            ? { order: lesson.unit.order, name: lesson.unit.name }
+            : undefined,
+          lesson: lesson.name,
+        }}
+      />
       <Box
         sx={{
           minHeight: "100vh",
@@ -572,6 +583,13 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
           py: { xs: 2, sm: 4 },
           px: { xs: 2, sm: 3, md: 4 },
           backgroundColor: (theme) => theme.palette.background.default,
+          backgroundImage: (theme) =>
+            theme.palette.mode === "dark"
+              ? "url('/hanziBackgroundDark.svg')"
+              : "url('/haziBackground.svg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundAttachment: "fixed",
         }}
       >
         <Box sx={{ maxWidth: 1100, mx: "auto", width: "100%" }}>

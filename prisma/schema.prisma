@@ -1,10 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider     = "prisma-client-js"
-  moduleFormat = "cjs"
   engineType   = "driverAdapters"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -12,36 +9,97 @@ datasource db {
 }
 
 model Lesson {
-  id         String       @id @default(cuid())
-  title      String
-  vocabulary Vocabulary[]
-  sentences  Sentence[]
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id           String         @id
+  unitId       String
+  order        Int
+  name         String
+  description  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  Unit         Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  Sentence     Sentence[]
+  UserProgress UserProgress[]
+  Vocabulary   Vocabulary[]
+
+  @@unique([unitId, order])
+  @@index([unitId])
 }
 
-model Vocabulary {
-  id       String  @id @default(cuid())
+model Level {
+  id          String   @id
+  programId   String
+  order       Int
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  Program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  Unit        Unit[]
+
+  @@unique([programId, order])
+  @@index([programId])
+}
+
+model Program {
+  id          String   @id
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  Level       Level[]
+}
+
+model Sentence {
+  id       String  @id
   lessonId String
-  lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   pinyin   String
   english  String
   hanzi    String?
   audioUrl String?
   order    Int     @default(0)
+  Lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@index([lessonId])
 }
 
-model Sentence {
-  id       String  @id @default(cuid())
+model Unit {
+  id          String   @id
+  levelId     String
+  order       Int
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  Lesson      Lesson[]
+  Level       Level    @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  @@unique([levelId, order])
+  @@index([levelId])
+}
+
+model UserProgress {
+  id                String    @id
+  lessonId          String
+  vocabularyMastery Float     @default(0)
+  sentenceMastery   Float     @default(0)
+  examPassed        Boolean   @default(false)
+  completedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime
+  Lesson            Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+}
+
+model Vocabulary {
+  id       String  @id
   lessonId String
-  lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   pinyin   String
   english  String
   hanzi    String?
   audioUrl String?
   order    Int     @default(0)
+  Lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@index([lessonId])
 }
