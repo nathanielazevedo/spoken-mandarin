@@ -182,9 +182,9 @@ export function FoundersSection() {
                     color="text.secondary"
                     sx={{ mb: 2, lineHeight: 1.6 }}
                   >
-                    Dr. Sun's research in cognitive neuroscience and
-                    language acquisition informs our evidence-based curriculum
-                    designed for optimal retention and real-world application.
+                    Dr. Sun's research in cognitive neuroscience and language
+                    acquisition informs our evidence-based curriculum designed
+                    for optimal retention and real-world application.
                   </Typography>
 
                   <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>

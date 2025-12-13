@@ -38,7 +38,13 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
       <AppBar
         position="static"
         elevation={0}
-        sx={{ background: "transparent", position: "relative", zIndex: 1, border: "none", boxShadow: "none" }}
+        sx={{
+          background: "transparent",
+          position: "relative",
+          zIndex: 1,
+          border: "none",
+          boxShadow: "none",
+        }}
       >
         <Container maxWidth="lg">
           <Toolbar disableGutters sx={{ py: 2 }}>

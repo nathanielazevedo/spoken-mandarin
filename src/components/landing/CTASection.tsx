@@ -28,7 +28,11 @@ export function CTASection({ onGetStarted }: CTASectionProps) {
     >
       <Container maxWidth="md" sx={{ position: "relative", zIndex: 1 }}>
         <Box sx={{ textAlign: "center" }}>
-          <Typography variant="h2" gutterBottom sx={{ fontWeight: 700, color: "white" }}>
+          <Typography
+            variant="h2"
+            gutterBottom
+            sx={{ fontWeight: 700, color: "white" }}
+          >
             Ready to Start Speaking Mandarin?
           </Typography>
           <Typography

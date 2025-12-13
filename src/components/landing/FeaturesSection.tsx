@@ -115,9 +115,8 @@ export function FeaturesSection() {
                 color="text.secondary"
                 sx={{ lineHeight: 1.8, mb: 2 }}
               >
-                You can't move forward until you've truly mastered the
-                material. No skipping ahead means solid foundations and real
-                fluency.
+                You can't move forward until you've truly mastered the material.
+                No skipping ahead means solid foundations and real fluency.
               </Typography>
               <Typography
                 variant="body2"
@@ -172,8 +171,8 @@ export function FeaturesSection() {
                 sx={{ lineHeight: 1.8, mb: 2 }}
               >
                 Advanced AI adapts to your learning style, provides instant
-                feedback, and creates personalized practice sessions for
-                maximum retention.
+                feedback, and creates personalized practice sessions for maximum
+                retention.
               </Typography>
               <Typography
                 variant="body2"
