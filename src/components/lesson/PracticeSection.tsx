@@ -25,10 +25,10 @@ export interface PracticeSectionProps {
   subtitle: string;
   listenButton: SectionButtonConfig;
   practiceButton: SectionButtonConfig;
+  speakButton?: SectionButtonConfig;
   addButton?: SectionButtonConfig;
   infoMessage?: string | null;
   extraActions?: ReactNode;
-  listenControls?: ReactNode;
   defaultExpanded?: boolean;
   children: ReactNode;
 }
@@ -38,10 +38,10 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
   subtitle,
   listenButton,
   practiceButton,
+  speakButton,
   addButton,
   infoMessage,
   extraActions,
-  listenControls,
   defaultExpanded = false,
   children,
 }) => {
@@ -93,12 +93,6 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
         borderRadius: 3,
         backgroundColor: (theme) => theme.palette.background.paper,
         cursor: "pointer",
-        "&:hover": {
-          backgroundColor: (theme) =>
-            theme.palette.mode === "dark"
-              ? "rgba(255, 255, 255, 0.05)"
-              : "rgba(0, 0, 0, 0.02)",
-        },
       }}
       onClick={toggleExpanded}
       onKeyDown={handleHeaderKeyDown}
@@ -134,7 +128,7 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
           spacing={1}
           flexWrap="wrap"
           sx={{
-            width: { xs: "100%", md: "auto" },
+            width: { xs: "100%", md: "100%" },
             justifyContent: { xs: "flex-start", md: "flex-end" },
             alignItems: "center",
             cursor: "default",
@@ -154,20 +148,8 @@ export const PracticeSection: React.FC<PracticeSectionProps> = ({
               {action}
             </Box>
           ))}
-          {listenControls ? (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-              }}
-              onClick={(event) => event.stopPropagation()}
-              onKeyDown={(event) => event.stopPropagation()}
-            >
-              {listenControls}
-            </Box>
-          ) : null}
           {renderIconButton(listenButton)}
+          {speakButton ? renderIconButton(speakButton) : null}
           {renderIconButton(practiceButton)}
         </Stack>
       </Stack>

@@ -1,12 +1,54 @@
-# Language Practice App
+# Mandarin Spoken
 
-React + TypeScript + Vite app for Mandarin study sessions. Lessons mix vocabulary flashcards, timed typing drills, and guided conversations with validation hints.
+A beautiful, modern Mandarin Chinese learning app built with Next.js and React. Practice vocabulary, sentences, and pronunciation with an elegant glass-morphism UI featuring traditional Chinese-inspired design elements.
+
+![Mandarin Spoken](public/background.svg)
+
+## Features
+
+### 📚 Lesson Management
+- Create, edit, and organize Mandarin lessons
+- Drag-and-drop reordering of vocabulary and sentences
+- Bulk import from JSON files
+
+### 🗣️ Vocabulary & Sentence Practice
+- Flashcard-style learning with pinyin and English translations
+- Audio playback with adjustable speed (0.5x - 2x)
+- Text-to-speech for pronunciation guidance
+
+### 🎤 Speech Recognition Practice
+- Record your pronunciation and get instant feedback
+- Powered by OpenAI Whisper for accurate Mandarin transcription
+- Pinyin comparison to check tonal accuracy
+- Section-level practice to work through all words/sentences
+
+### 🎧 Listen Mode
+- Play/pause/stop controls for audio
+- Speed adjustment for listening practice
+- Visual display of current word being played
+
+### 🎨 Beautiful Design
+- Glass-morphism UI with frosted card effects
+- Traditional Chinese-inspired red wave background
+- Light and dark mode support
+- SF Pro system font for crisp typography
+- Responsive design for all screen sizes
+
+## Tech Stack
+
+- **Framework:** Next.js 14 (App Router)
+- **UI:** Material UI (MUI) with custom theming
+- **Language:** TypeScript
+- **Drag & Drop:** @dnd-kit
+- **Speech Recognition:** OpenAI Whisper API
+- **Text-to-Speech:** OpenAI TTS API
+- **Pinyin Processing:** pinyin-pro
 
 ## Prerequisites
 
 - Node.js 20+
 - npm 10+
-- (Optional) OpenAI API key for pre-generating audio clips
+- (Optional) OpenAI API key for speech recognition and audio generation
 
 ## Local Development
 

@@ -19,6 +19,7 @@ import {
   Close as CloseIcon,
   Delete as DeleteIcon,
   DragIndicator as DragIndicatorIcon,
+  DriveFileMove as MoveIcon,
   Edit as EditIcon,
   KeyboardDoubleArrowDown as MoveToEndIcon,
   Translate as TranslateIcon,
@@ -56,6 +57,7 @@ export interface SortablePracticeCardProps {
     pinyin: string;
     english: string;
   }) => Promise<void> | void;
+  onOpenEditDialog?: () => void;
   isUpdating?: boolean;
   onVerifyPinyin?: () => void;
   isVerifying?: boolean;
@@ -66,6 +68,7 @@ export interface SortablePracticeCardProps {
   onGenerateHanzi?: () => Promise<void> | void;
   isGeneratingHanzi?: boolean;
   showDragHandle?: boolean;
+  onMoveToLesson?: () => void;
 }
 
 export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
@@ -94,6 +97,7 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
   onUpdateOrder,
   orderNumber,
   onEditEntry,
+  onOpenEditDialog,
   isUpdating,
   onVerifyPinyin,
   isVerifying,
@@ -101,6 +105,7 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
   onGenerateHanzi,
   isGeneratingHanzi,
   showDragHandle = true,
+  onMoveToLesson,
 }) => {
   const [isEditingWord, setIsEditingWord] = useState(false);
   const [editPinyin, setEditPinyin] = useState(entry.pinyin);
@@ -271,6 +276,7 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
     Boolean(onVerifyPinyin) ||
     Boolean(onRegenerateAudio) ||
     Boolean(onEditEntry) ||
+    Boolean(onOpenEditDialog) ||
     Boolean(onGenerateSentence) ||
     Boolean(onGenerateHanzi) ||
     Boolean(onDelete);
@@ -405,26 +411,28 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
               </span>
             </Tooltip>
           )}
-          {onEditEntry && (
-            <Tooltip title={isEditingWord ? "Close editor" : "Edit word"}>
+          {(onEditEntry || onOpenEditDialog) && (
+            <Tooltip title="Edit">
               <span>
                 <IconButton
                   size="small"
-                  disabled={editingDisabled}
+                  disabled={isUpdating}
                   onClick={(event) => {
                     event.stopPropagation();
-                    if (isEditingWord) {
-                      handleCancelEdit(event);
-                    } else {
-                      handleStartEdit(event);
+                    if (onOpenEditDialog) {
+                      onOpenEditDialog();
+                    } else if (onEditEntry) {
+                      if (isEditingWord) {
+                        handleCancelEdit(event);
+                      } else {
+                        handleStartEdit(event);
+                      }
                     }
                   }}
                   sx={{ color: "text.secondary" }}
                 >
-                  {editingDisabled ? (
+                  {isUpdating ? (
                     <CircularProgress size={16} thickness={5} />
-                  ) : isEditingWord ? (
-                    <CloseIcon fontSize="small" />
                   ) : (
                     <EditIcon fontSize="small" />
                   )}
@@ -450,6 +458,22 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
                   ) : (
                     <AutoAwesomeIcon fontSize="small" />
                   )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {onMoveToLesson && (
+            <Tooltip title="Move to lesson">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onMoveToLesson();
+                  }}
+                  sx={{ color: "text.secondary" }}
+                >
+                  <MoveIcon fontSize="small" />
                 </IconButton>
               </span>
             </Tooltip>

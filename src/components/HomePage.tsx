@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
-  CircularProgress,
   Alert,
   Typography,
   Button,
@@ -10,9 +9,12 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Stack,
+  Skeleton,
+  Card,
+  CardContent,
 } from "@mui/material";
 import { LessonCard } from "./LessonCard";
+import { TopNav } from "./TopNav";
 import { isLocalEnvironment } from "../utils/environment";
 import { getCachedLessons } from "../utils/offlineCache";
 
@@ -180,120 +182,109 @@ export const HomePage: React.FC<HomePageProps> = ({ onLessonClick }) => {
   };
 
   return (
-    <Box
-      sx={{
-        pt: { xs: 2, sm: 3 },
-        pb: 4,
-        px: { xs: 2, sm: 3, md: 4, lg: 5 },
-        width: "100%",
-      }}
-    >
+    <>
+      <TopNav
+        onCreateLesson={canCreateLessons ? handleOpenCreateDialog : undefined}
+        isCreatingLesson={isCreatingLesson}
+      />
       <Box
         sx={{
-          display: "flex",
-          flexDirection: "column",
-          gap: { xs: 2, sm: 3 },
+          pt: { xs: 2, sm: 3 },
+          pb: 4,
+          px: { xs: 2, sm: 3, md: 4, lg: 5 },
           width: "100%",
         }}
       >
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-          alignItems={{ xs: "stretch", sm: "center" }}
-          spacing={2}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: { xs: 2, sm: 3 },
+            width: "100%",
+          }}
         >
-          <Box>
-            <Typography variant="h4" component="h1">
-              Lessons
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Manage and practice your lesson library
-            </Typography>
-          </Box>
-          {canCreateLessons && (
-            <Button
-              variant="contained"
-              onClick={handleOpenCreateDialog}
-              sx={{ alignSelf: { xs: "stretch", sm: "center" } }}
-            >
-              Create Lesson
-            </Button>
+          {isLoading &&
+            [1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: { xs: "column", md: "row" },
+                      alignItems: { xs: "flex-start", md: "center" },
+                      justifyContent: "space-between",
+                      gap: 2,
+                    }}
+                  >
+                    <Skeleton variant="text" width={200} height={32} />
+                    <Skeleton variant="text" width={80} height={24} />
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+
+          {error && (
+            <Alert severity="error">
+              {error || "We couldn't load your lessons. Please try again."}
+            </Alert>
           )}
-        </Stack>
 
-        {isLoading && (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              py: 6,
-            }}
-          >
-            <CircularProgress />
-          </Box>
-        )}
+          {!isLoading && !error && lessons.length === 0 && (
+            <Typography color="text.secondary">
+              No lessons found. Come back later!
+            </Typography>
+          )}
 
-        {error && (
-          <Alert severity="error">
-            {error || "We couldn't load your lessons. Please try again."}
-          </Alert>
-        )}
-
-        {!isLoading && !error && lessons.length === 0 && (
-          <Typography color="text.secondary">
-            No lessons found. Come back later!
-          </Typography>
-        )}
-
-        {lessons.map((lesson) => (
-          <LessonCard
-            key={lesson.id}
-            lesson={lesson}
-            onClick={handleLessonClick}
-            isCompleted={false}
-            progress={0}
-            isCached={Boolean(cachedLessons[lesson.id])}
-            cachedAt={cachedLessons[lesson.id]}
-          />
-        ))}
-      </Box>
-
-      {canCreateLessons && (
-        <Dialog
-          open={isCreateDialogOpen}
-          onClose={handleCloseCreateDialog}
-          fullWidth
-        >
-          <DialogTitle>Create a lesson</DialogTitle>
-          <DialogContent sx={{ pt: 2 }}>
-            <TextField
-              label="Lesson name"
-              value={newLessonTitle}
-              onChange={(event) => setNewLessonTitle(event.target.value)}
-              autoFocus
-              fullWidth
-              disabled={isCreatingLesson}
-              helperText={createError}
-              error={Boolean(createError)}
+          {lessons.map((lesson) => (
+            <LessonCard
+              key={lesson.id}
+              lesson={lesson}
+              onClick={handleLessonClick}
+              isCompleted={false}
+              progress={0}
+              isCached={Boolean(cachedLessons[lesson.id])}
+              cachedAt={cachedLessons[lesson.id]}
             />
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={handleCloseCreateDialog}
-              disabled={isCreatingLesson}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateLesson}
-              variant="contained"
-              disabled={isCreatingLesson}
-            >
-              {isCreatingLesson ? "Creating..." : "Create"}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      )}
-    </Box>
+          ))}
+        </Box>
+
+        {canCreateLessons && (
+          <Dialog
+            open={isCreateDialogOpen}
+            onClose={handleCloseCreateDialog}
+            fullWidth
+          >
+            <DialogTitle>Create a lesson</DialogTitle>
+            <DialogContent sx={{ pt: 2 }}>
+              <TextField
+                label="Lesson name"
+                value={newLessonTitle}
+                onChange={(event) => setNewLessonTitle(event.target.value)}
+                autoFocus
+                fullWidth
+                disabled={isCreatingLesson}
+                helperText={createError}
+                error={Boolean(createError)}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={handleCloseCreateDialog}
+                disabled={isCreatingLesson}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateLesson}
+                variant="contained"
+                disabled={isCreatingLesson}
+              >
+                {isCreatingLesson ? "Creating..." : "Create"}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )}
+      </Box>
+    </>
   );
 };

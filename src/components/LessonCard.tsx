@@ -67,24 +67,6 @@ export const LessonCard: React.FC<LessonCardProps> = ({
                 sx={{ alignSelf: "flex-start" }}
               />
             )}
-            {isCached && (
-              <Tooltip
-                title={
-                  cachedAt
-                    ? `Cached ${new Date(cachedAt).toLocaleString()}`
-                    : "Cached for offline use"
-                }
-              >
-                <Chip
-                  label="Offline ready"
-                  color="primary"
-                  variant="outlined"
-                  icon={<CloudDoneRoundedIcon fontSize="small" />}
-                  size="small"
-                  sx={{ alignSelf: "flex-start" }}
-                />
-              </Tooltip>
-            )}
           </Box>
           <Box
             sx={{
