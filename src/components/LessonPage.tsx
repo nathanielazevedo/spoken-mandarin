@@ -21,7 +21,7 @@ import { AddSentenceDialog } from "./lesson/dialogs/AddSentenceDialog";
 import { BulkUploadDialog } from "./lesson/dialogs/BulkUploadDialog";
 import { MoveToLessonDialog } from "./lesson/dialogs/MoveToLessonDialog";
 import { normalizePinyinWord } from "../utils/pinyin";
-import { isLocalEnvironment } from "../utils/environment";
+import { useAuth } from "@/contexts/AuthContext";
 import { loadLessonFromCache, saveLessonToCache } from "../utils/offlineCache";
 import {
   applyPracticeOrder,
@@ -45,6 +45,7 @@ export interface LessonPageProps {
 }
 
 export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
+  const { isAdmin } = useAuth();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,13 +116,13 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   }, [sentences]);
   const resolvedLessonId = lesson?.id ?? lessonId ?? null;
 
-  const canEditLesson = useMemo(() => isLocalEnvironment(), []);
+  const canEditLesson = isAdmin;
 
   const ensureEditable = useCallback(() => {
     if (canEditLesson) {
       return true;
     }
-    setActionError("Editing is disabled outside of local development.");
+    setActionError("You don't have permission to edit lessons.");
     return false;
   }, [canEditLesson, setActionError]);
 
@@ -594,8 +595,8 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
       >
         <Box sx={{ maxWidth: 1100, mx: "auto", width: "100%" }}>
           <LessonHero
-            title={lesson.title}
-            description={``}
+            title={lesson.name}
+            description={lesson.description}
             onBackClick={handleBackClick}
             onBulkUploadClick={
               canEditLesson ? handleOpenBulkUploadDialog : undefined

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Alert,
@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import { LessonCard } from "./LessonCard";
 import { TopNav } from "./TopNav";
-import { isLocalEnvironment } from "../utils/environment";
+import { useAuth } from "@/contexts/AuthContext";
 import { getCachedLessons } from "../utils/offlineCache";
 
 interface LessonSummary {
@@ -29,6 +29,7 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ onLessonClick }) => {
+  const { isAdmin } = useAuth();
   const [lessons, setLessons] = useState<LessonSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +40,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onLessonClick }) => {
   const [cachedLessons, setCachedLessons] = useState<Record<string, number>>(
     {}
   );
-  const canCreateLessons = useMemo(() => isLocalEnvironment(), []);
+  const canCreateLessons = isAdmin;
 
   useEffect(() => {
     if (typeof window === "undefined") {

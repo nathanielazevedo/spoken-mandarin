@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "../context/ThemeContext";
+import { AuthProvider } from "../contexts/AuthContext";
 import { ServiceWorkerRegistration } from "./service-worker-registration";
 
 interface ProvidersProps {
@@ -14,7 +15,7 @@ export function Providers({ children }: ProvidersProps) {
     <ThemeProvider>
       <CssBaseline />
       <ServiceWorkerRegistration />
-      {children}
+      <AuthProvider>{children}</AuthProvider>
     </ThemeProvider>
   );
 }

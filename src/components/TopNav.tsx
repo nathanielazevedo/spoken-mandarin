@@ -1,20 +1,25 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   AppBar,
+  Avatar,
   Box,
   Breadcrumbs,
+  Button,
   IconButton,
   Link,
+  Menu,
+  MenuItem,
   Toolbar,
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
+import { Add as AddIcon, Person as PersonIcon } from "@mui/icons-material";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Helper to convert number to Roman numeral
 const toRoman = (num: number): string => {
@@ -53,9 +58,29 @@ export const TopNav: React.FC<TopNavProps> = ({
   breadcrumb,
 }) => {
   const router = useRouter();
+  const { user, signOut, isLoading, isAdmin, role } = useAuth();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleLogoClick = () => {
     router.push("/");
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    handleMenuClose();
+    router.push("/");
+  };
+
+  const handleLogin = () => {
+    router.push("/login");
   };
 
   return (
@@ -169,6 +194,79 @@ export const TopNav: React.FC<TopNavProps> = ({
             </Tooltip>
           )}
           <ThemeToggle />
+          {!isLoading && (
+            <>
+              {user ? (
+                <>
+                  <Tooltip title="Account">
+                    <IconButton
+                      onClick={handleMenuOpen}
+                      size="small"
+                      sx={{ ml: 0.5 }}
+                    >
+                      <Avatar
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          bgcolor: "primary.main",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        {user.email?.[0].toUpperCase()}
+                      </Avatar>
+                    </IconButton>
+                  </Tooltip>
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl)}
+                    onClose={handleMenuClose}
+                    anchorOrigin={{
+                      vertical: "bottom",
+                      horizontal: "right",
+                    }}
+                    transformOrigin={{
+                      vertical: "top",
+                      horizontal: "right",
+                    }}
+                  >
+                    <MenuItem disabled>
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          {user.email}
+                        </Typography>
+                        {isAdmin && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "primary.main",
+                              fontWeight: 600,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Admin
+                          </Typography>
+                        )}
+                      </Box>
+                    </MenuItem>
+                    <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
+                  </Menu>
+                </>
+              ) : (
+                <Button
+                  onClick={handleLogin}
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    ml: 1,
+                    textTransform: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  Sign In
+                </Button>
+              )}
+            </>
+          )}
         </Box>
       </Toolbar>
     </AppBar>
