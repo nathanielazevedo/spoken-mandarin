@@ -154,7 +154,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
         sx={{ py: { xs: 8, md: 14 }, position: "relative", zIndex: 1 }}
       >
         <Grid container spacing={6} alignItems="center">
-          <Grid item xs={12} md={7}>
+          <Grid size={{ xs: 12, md: 7 }}>
             <Box>
               <Typography
                 variant="overline"

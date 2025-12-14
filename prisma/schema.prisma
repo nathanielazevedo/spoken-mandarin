@@ -9,76 +9,76 @@ datasource db {
 }
 
 model Lesson {
-  id           String         @id
+  id           String         @id @default(cuid())
   unitId       String
   order        Int
   name         String
   description  String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime
-  Unit         Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  Sentence     Sentence[]
-  UserProgress UserProgress[]
-  Vocabulary   Vocabulary[]
+  unit         Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  sentences    Sentence[]
+  userProgress UserProgress[]
+  vocabulary   Vocabulary[]
 
   @@unique([unitId, order])
   @@index([unitId])
 }
 
 model Level {
-  id          String   @id
+  id          String   @id @default(cuid())
   programId   String
   order       Int
   name        String
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime
-  Program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
-  Unit        Unit[]
+  program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  units       Unit[]
 
   @@unique([programId, order])
   @@index([programId])
 }
 
 model Program {
-  id          String   @id
+  id          String   @id @default(cuid())
   name        String
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime
-  Level       Level[]
+  levels      Level[]
 }
 
 model Sentence {
-  id       String  @id
+  id       String  @id @default(cuid())
   lessonId String
   pinyin   String
   english  String
   hanzi    String?
   audioUrl String?
   order    Int     @default(0)
-  Lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@index([lessonId])
 }
 
 model Unit {
-  id          String   @id
+  id          String   @id @default(cuid())
   levelId     String
   order       Int
   name        String
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime
-  Lesson      Lesson[]
-  Level       Level    @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+  level       Level    @relation(fields: [levelId], references: [id], onDelete: Cascade)
 
   @@unique([levelId, order])
   @@index([levelId])
 }
 
 model UserProgress {
-  id                String    @id
+  id                String    @id @default(cuid())
   lessonId          String
   vocabularyMastery Float     @default(0)
   sentenceMastery   Float     @default(0)
@@ -86,20 +86,20 @@ model UserProgress {
   completedAt       DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime
-  Lesson            Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson            Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@index([lessonId])
 }
 
 model Vocabulary {
-  id       String  @id
+  id       String  @id @default(cuid())
   lessonId String
   pinyin   String
   english  String
   hanzi    String?
   audioUrl String?
   order    Int     @default(0)
-  Lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@index([lessonId])
 }

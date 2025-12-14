@@ -38,7 +38,7 @@ export function FoundersSection() {
 
         <Grid container spacing={3} justifyContent="center">
           {/* Nate Azevedo */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card
               elevation={0}
               sx={{
@@ -127,7 +127,7 @@ export function FoundersSection() {
           </Grid>
 
           {/* Liyuan Sun */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card
               elevation={0}
               sx={{

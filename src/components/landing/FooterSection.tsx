@@ -20,7 +20,7 @@ export function FooterSection() {
     >
       <Container maxWidth="lg">
         <Grid container spacing={4}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Box
               sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}
             >
@@ -40,9 +40,9 @@ export function FooterSection() {
               conversation and real-world scenarios.
             </Typography>
           </Grid>
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <Grid container spacing={4}>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
                   Product
                 </Typography>
@@ -70,7 +70,7 @@ export function FooterSection() {
                   </Typography>
                 </Stack>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
                   Company
                 </Typography>
@@ -98,7 +98,7 @@ export function FooterSection() {
                   </Typography>
                 </Stack>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
                   Resources
                 </Typography>
@@ -126,7 +126,7 @@ export function FooterSection() {
                   </Typography>
                 </Stack>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
                   Legal
                 </Typography>

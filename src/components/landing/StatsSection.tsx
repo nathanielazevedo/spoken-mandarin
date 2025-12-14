@@ -12,7 +12,7 @@ export function StatsSection() {
     >
       <Container maxWidth="lg">
         <Grid container spacing={4} justifyContent="space-evenly">
-          <Grid item xs={12} sm={4}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <Box sx={{ textAlign: "center" }}>
               <Typography
                 variant="h3"
@@ -26,7 +26,7 @@ export function StatsSection() {
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <Box sx={{ textAlign: "center" }}>
               <Typography
                 variant="h3"
@@ -40,7 +40,7 @@ export function StatsSection() {
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <Box sx={{ textAlign: "center" }}>
               <Typography
                 variant="h3"

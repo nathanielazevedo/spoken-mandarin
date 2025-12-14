@@ -64,7 +64,7 @@ export function PricingSection({ onGetStarted }: PricingSectionProps) {
           alignItems="stretch"
         >
           {/* Free Plan */}
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card
               elevation={0}
               sx={{
@@ -219,7 +219,7 @@ export function PricingSection({ onGetStarted }: PricingSectionProps) {
           </Grid>
 
           {/* Premium Plan - Featured */}
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card
               elevation={0}
               sx={{
