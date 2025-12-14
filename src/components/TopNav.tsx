@@ -248,6 +248,16 @@ export const TopNav: React.FC<TopNavProps> = ({
                         )}
                       </Box>
                     </MenuItem>
+                    {isAdmin && (
+                      <MenuItem
+                        onClick={() => {
+                          handleMenuClose();
+                          router.push("/admin");
+                        }}
+                      >
+                        Admin Dashboard
+                      </MenuItem>
+                    )}
                     <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
                   </Menu>
                 </>
