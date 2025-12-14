@@ -19,6 +19,7 @@ import {
   Tooltip,
   Paper,
   CircularProgress,
+  Button,
 } from "@mui/material";
 import {
   ExpandMore,
@@ -28,9 +29,12 @@ import {
   CheckCircle,
   Lock,
   EmojiEvents,
+  Login,
 } from "@mui/icons-material";
 import { TopNav } from "./TopNav";
 import { useProgress } from "../hooks/useProgress";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 // Types for the curriculum hierarchy
 interface Lesson {
@@ -290,6 +294,9 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
   const [expandedLevel, setExpandedLevel] = useState<string | false>(false);
   const [expandedUnit, setExpandedUnit] = useState<string | false>(false);
 
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+
   const {
     isLessonUnlocked,
     isLessonCompleted,
@@ -352,7 +359,7 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
       setExpandedUnit(isExpanded ? unitId : false);
     };
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <Box
         sx={{
@@ -379,6 +386,85 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
               sx={{ mb: 2, borderRadius: 2 }}
             />
           ))}
+        </Container>
+      </Box>
+    );
+  }
+
+  // Show login prompt if user is not authenticated
+  if (!user) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          bgcolor: "background.default",
+          backgroundImage: (theme) =>
+            theme.palette.mode === "dark"
+              ? "url('/hanziBackgroundDark.svg')"
+              : "url('/haziBackground.svg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundAttachment: "fixed",
+        }}
+      >
+        <TopNav />
+        <Container maxWidth="md" sx={{ py: 8 }}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 6,
+              borderRadius: 3,
+              textAlign: "center",
+              background: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "linear-gradient(135deg, rgba(220,38,38,0.15) 0%, rgba(30,30,30,0.95) 100%)"
+                  : "linear-gradient(135deg, rgba(220,38,38,0.1) 0%, rgba(255,255,255,0.95) 100%)",
+              border: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Lock
+              sx={{
+                fontSize: 64,
+                color: "primary.main",
+                mb: 2,
+                opacity: 0.8,
+              }}
+            />
+            <Typography variant="h4" gutterBottom fontWeight={700}>
+              Sign In to Access Curriculum
+            </Typography>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ mb: 4, maxWidth: 500, mx: "auto" }}
+            >
+              Create an account or sign in to start your Mandarin learning
+              journey. Track your progress, unlock lessons, and master Chinese
+              at your own pace.
+            </Typography>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={2}
+              justifyContent="center"
+            >
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<Login />}
+                onClick={() => router.push("/login")}
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  textTransform: "none",
+                }}
+              >
+                Sign In / Sign Up
+              </Button>
+            </Stack>
+          </Paper>
         </Container>
       </Box>
     );

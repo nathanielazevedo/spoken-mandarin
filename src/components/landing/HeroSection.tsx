@@ -7,14 +7,47 @@ import {
   AppBar,
   Toolbar,
   Stack,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
 } from "@mui/material";
-import { PlayArrow as Play } from "@mui/icons-material";
+import {
+  PlayArrow as Play,
+  Menu as MenuIcon,
+  Close as CloseIcon,
+} from "@mui/icons-material";
+import { useState } from "react";
 
 interface HeroSectionProps {
   onGetStarted: () => void;
 }
 
 export function HeroSection({ onGetStarted }: HeroSectionProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const handleNavClick = (sectionId: string) => {
+    setMobileMenuOpen(false);
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleGetStartedClick = () => {
+    setMobileMenuOpen(false);
+    onGetStarted();
+  };
+
+  const navItems = [
+    { label: "Why Choose Us", id: "why-choose" },
+    { label: "How It Works", id: "how-it-works" },
+    { label: "Pricing", id: "pricing" },
+    { label: "Our Team", id: "founders" },
+  ];
   return (
     <Box
       sx={{
@@ -63,72 +96,34 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
                 sx={{ height: 48, width: "auto" }}
               />
             </Box>
+
+            {/* Desktop Navigation */}
             <Stack
               direction="row"
               spacing={3}
               sx={{ display: { xs: "none", md: "flex" }, mr: 4 }}
             >
-              <Button
-                color="inherit"
-                onClick={() =>
-                  document
-                    .getElementById("why-choose")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-                sx={{
-                  fontWeight: 600,
-                  "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
-                }}
-              >
-                Why Choose Us
-              </Button>
-              <Button
-                color="inherit"
-                onClick={() =>
-                  document
-                    .getElementById("how-it-works")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-                sx={{
-                  fontWeight: 600,
-                  "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
-                }}
-              >
-                How It Works
-              </Button>
-              <Button
-                color="inherit"
-                onClick={() =>
-                  document
-                    .getElementById("pricing")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-                sx={{
-                  fontWeight: 600,
-                  "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
-                }}
-              >
-                Pricing
-              </Button>
-              <Button
-                color="inherit"
-                onClick={() =>
-                  document
-                    .getElementById("founders")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-                sx={{
-                  fontWeight: 600,
-                  "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
-                }}
-              >
-                Our Team
-              </Button>
+              {navItems.map((item) => (
+                <Button
+                  key={item.id}
+                  color="inherit"
+                  onClick={() => handleNavClick(item.id)}
+                  sx={{
+                    fontWeight: 600,
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
             </Stack>
+
+            {/* Desktop Get Started Button */}
             <Button
               variant="contained"
               onClick={onGetStarted}
               sx={{
+                display: { xs: "none", md: "inline-flex" },
                 bgcolor: "white",
                 color: "primary.main",
                 "&:hover": {
@@ -145,9 +140,77 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             >
               Get Started
             </Button>
+
+            {/* Mobile Hamburger Menu */}
+            <IconButton
+              onClick={toggleMobileMenu}
+              sx={{
+                display: { xs: "flex", md: "none" },
+                color: "white",
+              }}
+            >
+              <MenuIcon />
+            </IconButton>
           </Toolbar>
         </Container>
       </AppBar>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        anchor="right"
+        open={mobileMenuOpen}
+        onClose={toggleMobileMenu}
+        sx={{
+          display: { xs: "block", md: "none" },
+          "& .MuiDrawer-paper": {
+            width: 280,
+            background:
+              "linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f97316 100%)",
+            color: "white",
+          },
+        }}
+      >
+        <Box sx={{ p: 2, display: "flex", justifyContent: "flex-end" }}>
+          <IconButton onClick={toggleMobileMenu} sx={{ color: "white" }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <List>
+          {navItems.map((item) => (
+            <ListItem key={item.id} disablePadding>
+              <ListItemButton onClick={() => handleNavClick(item.id)}>
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    fontWeight: 600,
+                    fontSize: "1.1rem",
+                  }}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
+          <ListItem disablePadding sx={{ mt: 2, px: 2 }}>
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleGetStartedClick}
+              sx={{
+                bgcolor: "white",
+                color: "primary.main",
+                "&:hover": {
+                  bgcolor: "grey.100",
+                },
+                borderRadius: 2,
+                py: 1.5,
+                fontWeight: 600,
+                boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+              }}
+            >
+              Get Started
+            </Button>
+          </ListItem>
+        </List>
+      </Drawer>
 
       <Container
         maxWidth="lg"

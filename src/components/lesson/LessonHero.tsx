@@ -45,31 +45,6 @@ export const LessonHero: React.FC<LessonHeroProps> = ({
           <Typography color="text.secondary">{description}</Typography>
         )}
       </Box>
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1}
-        alignItems={{ xs: "stretch", sm: "center" }}
-        justifyContent={{ xs: "flex-start", sm: "flex-end" }}
-        sx={{ width: { xs: "100%", sm: "auto" } }}
-      >
-        {onBulkUploadClick && (
-          <Tooltip title="Bulk upload JSON">
-            <IconButton
-              onClick={onBulkUploadClick}
-              color="primary"
-              aria-label="Bulk upload JSON"
-              sx={{
-                border: 1,
-                borderColor: "divider",
-                width: 48,
-                height: 48,
-              }}
-            >
-              <UploadFileRoundedIcon />
-            </IconButton>
-          </Tooltip>
-        )}
-      </Stack>
     </Stack>
   </Paper>
 );

@@ -160,23 +160,23 @@ export function ExamSection({ lessonId, onExamPassed }: ExamSectionProps) {
   // Show exam card (invitation to take the exam)
   return (
     <Paper
+      elevation={4}
       sx={{
-        p: 4,
+        p: { xs: 2.5, sm: 3 },
         mt: 4,
+        borderRadius: 3,
+        backgroundColor: (theme) => theme.palette.background.paper,
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-        <QuizIcon sx={{ fontSize: 40 }} color="primary" />
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>
-            {exam.title || "Lesson Exam"}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          {exam.title || "Lesson Exam"}
+        </Typography>
+        {exam.description && (
+          <Typography variant="body2" color="text.secondary">
+            {exam.description}
           </Typography>
-          {exam.description && (
-            <Typography variant="body2" color="text.secondary">
-              {exam.description}
-            </Typography>
-          )}
-        </Box>
+        )}
       </Box>
 
       <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>

@@ -69,6 +69,7 @@ export interface SortablePracticeCardProps {
   isGeneratingHanzi?: boolean;
   showDragHandle?: boolean;
   onMoveToLesson?: () => void;
+  showHanzi?: boolean;
 }
 
 export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
@@ -106,6 +107,7 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
   isGeneratingHanzi,
   showDragHandle = true,
   onMoveToLesson,
+  showHanzi = false,
 }) => {
   const [isEditingWord, setIsEditingWord] = useState(false);
   const [editPinyin, setEditPinyin] = useState(entry.pinyin);
@@ -288,7 +290,6 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
       sx={{
         position: "relative",
         width: "100%",
-        p: 2,
         border: "1px solid",
         borderColor: isActive ? "primary.main" : "divider",
         borderRadius: 2,
@@ -303,10 +304,14 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
           direction="row"
           spacing={0.5}
           sx={{
-            position: "absolute",
-            top: 8,
-            right: 8,
             alignItems: "center",
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+            pt: 1,
+            px: 2,
+            pb: 0.5,
+            borderBottom: "1px solid",
+            borderColor: "divider",
           }}
         >
           {shouldShowDragHandle && (
@@ -325,23 +330,6 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
                   }}
                 >
                   <DragIndicatorIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-          )}
-          {onMoveToEnd && (
-            <Tooltip title="Send to end">
-              <span>
-                <IconButton
-                  size="small"
-                  disabled={dragDisabled}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onMoveToEnd();
-                  }}
-                  sx={{ color: "text.secondary" }}
-                >
-                  <MoveToEndIcon fontSize="small" />
                 </IconButton>
               </span>
             </Tooltip>
@@ -440,44 +428,6 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
               </span>
             </Tooltip>
           )}
-          {onGenerateSentence && (
-            <Tooltip
-              title={
-                generatedSentence ? "Regenerate sentence" : "Generate sentence"
-              }
-            >
-              <span>
-                <IconButton
-                  size="small"
-                  disabled={Boolean(isSavingGeneratedSentence)}
-                  onClick={handleGenerateClick}
-                  sx={{ color: "text.secondary" }}
-                >
-                  {isGeneratingSentence ? (
-                    <CircularProgress size={16} thickness={5} />
-                  ) : (
-                    <AutoAwesomeIcon fontSize="small" />
-                  )}
-                </IconButton>
-              </span>
-            </Tooltip>
-          )}
-          {onMoveToLesson && (
-            <Tooltip title="Move to lesson">
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onMoveToLesson();
-                  }}
-                  sx={{ color: "text.secondary" }}
-                >
-                  <MoveIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-          )}
           {onDelete && (
             <Tooltip title="Delete">
               <span>
@@ -501,333 +451,293 @@ export const SortablePracticeCard: React.FC<SortablePracticeCardProps> = ({
           )}
         </Stack>
       )}
-      {(subtitle || typeof orderNumber === "number") && (
+      {audioVoice && (
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-          {typeof orderNumber === "number" && !isEditingOrder && (
-            <Chip
-              size="small"
-              label={`#${orderNumber}`}
-              variant="outlined"
-              sx={{
-                fontWeight: 600,
-                cursor: onUpdateOrder ? "pointer" : undefined,
-              }}
-              onClick={onUpdateOrder ? handleOrderChipClick : undefined}
-              onMouseDown={(event) => event.stopPropagation()}
-            />
-          )}
-          {typeof orderNumber === "number" && isEditingOrder && (
-            <TextField
-              size="small"
-              autoFocus
-              value={orderInput}
-              onChange={(event) => setOrderInput(event.target.value)}
-              onBlur={handleOrderSubmit}
-              onKeyDown={handleOrderInputKeyDown}
-              inputProps={{
-                inputMode: "numeric",
-                pattern: "[0-9]*",
-                min: 1,
-                style: { width: 56, textAlign: "center" },
-              }}
-              sx={{ width: 70 }}
-              onClick={(event) => event.stopPropagation()}
-            />
-          )}
-          {subtitle && (
-            <Typography variant="subtitle2" color="text.secondary">
-              {subtitle}
-            </Typography>
-          )}
-          {!hasAudio && (
-            <Chip
-              size="small"
-              label="Audio missing"
-              color="warning"
-              variant="outlined"
-              sx={{ fontWeight: 600 }}
-            />
-          )}
-          {audioVoice && (
-            <Chip
-              size="small"
-              label={`Voice: ${audioVoice}`}
-              color="default"
-              variant="outlined"
-              sx={{ fontWeight: 600, textTransform: "capitalize" }}
-            />
-          )}
-          {isHanziMissing && (
-            <Chip
-              size="small"
-              label="Chars missing"
-              color="info"
-              variant="outlined"
-              sx={{ fontWeight: 600 }}
-            />
-          )}
-        </Stack>
-      )}
-      {isEditingWord ? (
-        <Stack spacing={1} sx={{ pr: 8 }}>
-          <TextField
-            label="Pinyin"
-            size="small"
-            value={editPinyin}
-            onChange={(event) => setEditPinyin(event.target.value)}
-            fullWidth
-            autoFocus
-          />
-          <TextField
-            label="English"
-            size="small"
-            value={editEnglish}
-            onChange={(event) => setEditEnglish(event.target.value)}
-            fullWidth
-          />
-          {editError && (
-            <Typography variant="caption" color="error">
-              {editError}
-            </Typography>
-          )}
-          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-            <Button
-              size="small"
-              variant="contained"
-              onClick={(event) => {
-                event.stopPropagation();
-                void handleSaveEdit();
-              }}
-              disabled={editingDisabled}
-              sx={{ display: "flex", alignItems: "center", gap: 1 }}
-            >
-              Save
-              {(isSavingEdit || isUpdating) && (
-                <CircularProgress size={16} thickness={5} />
-              )}
-            </Button>
-            <Button
-              size="small"
-              onClick={(event) => handleCancelEdit(event)}
-              disabled={editingDisabled}
-            >
-              Cancel
-            </Button>
-          </Stack>
-        </Stack>
-      ) : (
-        <>
-          <Typography variant="h6" fontWeight={600} sx={{ pr: 8 }}>
-            {highlightedPinyinSegments
-              ? highlightedPinyinSegments.map((segment, index) => {
-                  const trimmedWord = segment.text.trim();
-                  const isClickable = Boolean(
-                    segment.highlight && trimmedWord && onMissingWordClick
-                  );
-
-                  const handleClick = (
-                    event: React.MouseEvent<HTMLSpanElement>
-                  ) => {
-                    if (!isClickable || !trimmedWord) {
-                      return;
-                    }
-                    event.stopPropagation();
-                    onMissingWordClick?.(trimmedWord);
-                  };
-
-                  const handleKeyDown = (
-                    event: React.KeyboardEvent<HTMLSpanElement>
-                  ) => {
-                    if (!isClickable || !trimmedWord) {
-                      return;
-                    }
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      onMissingWordClick?.(trimmedWord);
-                    }
-                  };
-
-                  return (
-                    <Box
-                      component="span"
-                      key={`${entry.id}-segment-${index}`}
-                      role={isClickable ? "button" : undefined}
-                      tabIndex={isClickable ? 0 : undefined}
-                      onClick={isClickable ? handleClick : undefined}
-                      onKeyDown={isClickable ? handleKeyDown : undefined}
-                      sx={{
-                        ...(segment.highlight
-                          ? { color: "error.main", fontWeight: 700 }
-                          : undefined),
-                        ...(isClickable
-                          ? {
-                              cursor: "pointer",
-                              textDecoration: "underline dotted",
-                            }
-                          : undefined),
-                      }}
-                    >
-                      {segment.text}
-                    </Box>
-                  );
-                })
-              : entry.pinyin}
-          </Typography>
-          <Typography variant="body1" sx={{ pr: 8 }}>
-            {entry.english}
-          </Typography>
-          {verificationResult && (
-            <Tooltip
-              title={
-                verificationResult.message ||
-                (verificationResult.status === "success"
-                  ? "Pinyin and hanzi verified"
-                  : "Verification issue")
-              }
-            >
-              <Chip
-                size="small"
-                label={
-                  verificationResult.status === "success"
-                    ? "Pinyin & hanzi verified"
-                    : "Needs review"
-                }
-                color={
-                  verificationResult.status === "success" ? "success" : "error"
-                }
-                variant="outlined"
-                sx={{ alignSelf: "flex-start", mt: 1 }}
-              />
-            </Tooltip>
-          )}
-        </>
-      )}
-      {duplicateMatches.length > 0 && (
-        <Box
-          sx={{
-            mt: 1,
-            p: 1,
-            borderRadius: 1.5,
-            border: "1px dashed",
-            borderColor: "warning.light",
-            backgroundColor: (theme) =>
-              theme.palette.mode === "dark"
-                ? "rgba(255, 193, 7, 0.08)"
-                : "rgba(255, 193, 7, 0.08)",
-          }}
-        >
           <Chip
-            label="Duplicate pinyin"
             size="small"
-            color="warning"
-            sx={{ mb: 0.75 }}
+            label={`Voice: ${audioVoice}`}
+            color="default"
+            variant="outlined"
+            sx={{ fontWeight: 600, textTransform: "capitalize" }}
           />
-          <Typography variant="body2" sx={{ color: "warning.dark" }}>
-            Matches:
-          </Typography>
-          <Stack spacing={0.25} sx={{ mt: 0.5 }}>
-            {duplicateMatches.map((duplicate) => (
-              <Typography variant="body2" key={duplicate.id}>
-                {duplicate.pinyin} — {duplicate.english}
+        </Stack>
+      )}
+      <Box sx={{ p: 2 }}>
+        {isEditingWord ? (
+          <Stack spacing={1}>
+            <TextField
+              label="Pinyin"
+              size="small"
+              value={editPinyin}
+              onChange={(event) => setEditPinyin(event.target.value)}
+              fullWidth
+              autoFocus
+            />
+            <TextField
+              label="English"
+              size="small"
+              value={editEnglish}
+              onChange={(event) => setEditEnglish(event.target.value)}
+              fullWidth
+            />
+            {editError && (
+              <Typography variant="caption" color="error">
+                {editError}
               </Typography>
-            ))}
-          </Stack>
-        </Box>
-      )}
-      {generationError && (
-        <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-          {generationError}
-        </Typography>
-      )}
-      {generatedSentence && (
-        <Box
-          sx={{
-            mt: 1,
-            p: 1.25,
-            border: "1px dashed",
-            borderColor: "divider",
-            borderRadius: 1.5,
-            backgroundColor: "background.paper",
-          }}
-        >
-          <Typography variant="caption" color="text.secondary">
-            AI suggestion
-          </Typography>
-          <Typography variant="subtitle2" sx={{ mt: 0.5 }}>
-            {generatedSentence.pinyin}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {generatedSentence.english}
-          </Typography>
-          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
-            {onSaveGeneratedSentence && (
+            )}
+            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
               <Button
                 size="small"
                 variant="contained"
-                onClick={handleSaveClick}
-                disabled={Boolean(isSavingGeneratedSentence)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void handleSaveEdit();
+                }}
+                disabled={editingDisabled}
+                sx={{ display: "flex", alignItems: "center", gap: 1 }}
               >
-                Save sentence
-                {isSavingGeneratedSentence && (
-                  <CircularProgress size={16} thickness={5} sx={{ ml: 1 }} />
+                Save
+                {(isSavingEdit || isUpdating) && (
+                  <CircularProgress size={16} thickness={5} />
                 )}
               </Button>
-            )}
-            {onGenerateSentence && (
               <Button
                 size="small"
-                variant="outlined"
-                onClick={handleGenerateClick}
-                disabled={Boolean(isGeneratingSentence)}
+                onClick={(event) => handleCancelEdit(event)}
+                disabled={editingDisabled}
               >
-                Regenerate
+                Cancel
               </Button>
-            )}
-            {onClearGeneratedSentence && (
-              <Button size="small" onClick={handleDismissClick}>
-                Dismiss
-              </Button>
-            )}
+            </Stack>
           </Stack>
-        </Box>
-      )}
-      {hasSentenceMatches && (
-        <Chip
-          label={`${sentenceMatches.length} sentence${
-            sentenceMatches.length === 1 ? "" : "s"
-          }`}
-          size="small"
-          color={isMatchesVisible ? "primary" : "default"}
-          variant={isMatchesVisible ? "filled" : "outlined"}
-          sx={{ mt: 1, alignSelf: "flex-start" }}
-          onClick={handleToggleMatches}
-          onMouseDown={(event) => event.stopPropagation()}
-        />
-      )}
-      {hasSentenceMatches && (
-        <Collapse in={isMatchesVisible} timeout="auto" unmountOnExit>
-          <Stack spacing={0.5} sx={{ mt: 1 }}>
-            {sentenceMatches.map((sentence) => (
-              <Box
-                key={sentence.id}
+        ) : (
+          <>
+            <Typography variant="h6" fontWeight={600}>
+              {highlightedPinyinSegments
+                ? highlightedPinyinSegments.map((segment, index) => {
+                    const trimmedWord = segment.text.trim();
+                    const isClickable = Boolean(
+                      segment.highlight && trimmedWord && onMissingWordClick
+                    );
+
+                    const handleClick = (
+                      event: React.MouseEvent<HTMLSpanElement>
+                    ) => {
+                      if (!isClickable || !trimmedWord) {
+                        return;
+                      }
+                      event.stopPropagation();
+                      onMissingWordClick?.(trimmedWord);
+                    };
+
+                    const handleKeyDown = (
+                      event: React.KeyboardEvent<HTMLSpanElement>
+                    ) => {
+                      if (!isClickable || !trimmedWord) {
+                        return;
+                      }
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onMissingWordClick?.(trimmedWord);
+                      }
+                    };
+
+                    return (
+                      <Box
+                        component="span"
+                        key={`${entry.id}-segment-${index}`}
+                        role={isClickable ? "button" : undefined}
+                        tabIndex={isClickable ? 0 : undefined}
+                        onClick={isClickable ? handleClick : undefined}
+                        onKeyDown={isClickable ? handleKeyDown : undefined}
+                        sx={{
+                          ...(segment.highlight
+                            ? { color: "error.main", fontWeight: 700 }
+                            : undefined),
+                          ...(isClickable
+                            ? {
+                                cursor: "pointer",
+                                textDecoration: "underline dotted",
+                              }
+                            : undefined),
+                        }}
+                      >
+                        {segment.text}
+                      </Box>
+                    );
+                  })
+                : entry.pinyin}
+            </Typography>
+            {showHanzi && entry.hanzi && (
+              <Typography
+                variant="h6"
                 sx={{
-                  borderLeft: "2px solid",
-                  borderColor: "divider",
-                  pl: 1,
+                  pr: 8,
+                  fontWeight: 500,
+                  color: "text.primary",
                 }}
               >
-                <Typography variant="body2" fontWeight={600}>
-                  {sentence.pinyin}
+                {entry.hanzi}
+              </Typography>
+            )}
+            <Typography variant="body1" sx={{ pr: 8 }}>
+              {entry.english}
+            </Typography>
+            {verificationResult && (
+              <Tooltip
+                title={
+                  verificationResult.message ||
+                  (verificationResult.status === "success"
+                    ? "Pinyin and hanzi verified"
+                    : "Verification issue")
+                }
+              >
+                <Chip
+                  size="small"
+                  label={
+                    verificationResult.status === "success"
+                      ? "Pinyin & hanzi verified"
+                      : "Needs review"
+                  }
+                  color={
+                    verificationResult.status === "success"
+                      ? "success"
+                      : "error"
+                  }
+                  variant="outlined"
+                  sx={{ alignSelf: "flex-start", mt: 1 }}
+                />
+              </Tooltip>
+            )}
+          </>
+        )}
+        {duplicateMatches.length > 0 && (
+          <Box
+            sx={{
+              mt: 1,
+              p: 1,
+              borderRadius: 1.5,
+              border: "1px dashed",
+              borderColor: "warning.light",
+              backgroundColor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(255, 193, 7, 0.08)"
+                  : "rgba(255, 193, 7, 0.08)",
+            }}
+          >
+            <Chip
+              label="Duplicate pinyin"
+              size="small"
+              color="warning"
+              sx={{ mb: 0.75 }}
+            />
+            <Typography variant="body2" sx={{ color: "warning.dark" }}>
+              Matches:
+            </Typography>
+            <Stack spacing={0.25} sx={{ mt: 0.5 }}>
+              {duplicateMatches.map((duplicate) => (
+                <Typography variant="body2" key={duplicate.id}>
+                  {duplicate.pinyin} — {duplicate.english}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {sentence.english}
-                </Typography>
-              </Box>
-            ))}
-          </Stack>
-        </Collapse>
-      )}
+              ))}
+            </Stack>
+          </Box>
+        )}
+        {generationError && (
+          <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+            {generationError}
+          </Typography>
+        )}
+        {generatedSentence && (
+          <Box
+            sx={{
+              mt: 1,
+              p: 1.25,
+              border: "1px dashed",
+              borderColor: "divider",
+              borderRadius: 1.5,
+              backgroundColor: "background.paper",
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              AI suggestion
+            </Typography>
+            <Typography variant="subtitle2" sx={{ mt: 0.5 }}>
+              {generatedSentence.pinyin}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {generatedSentence.english}
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
+              {onSaveGeneratedSentence && (
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleSaveClick}
+                  disabled={Boolean(isSavingGeneratedSentence)}
+                >
+                  Save sentence
+                  {isSavingGeneratedSentence && (
+                    <CircularProgress size={16} thickness={5} sx={{ ml: 1 }} />
+                  )}
+                </Button>
+              )}
+              {onGenerateSentence && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleGenerateClick}
+                  disabled={Boolean(isGeneratingSentence)}
+                >
+                  Regenerate
+                </Button>
+              )}
+              {onClearGeneratedSentence && (
+                <Button size="small" onClick={handleDismissClick}>
+                  Dismiss
+                </Button>
+              )}
+            </Stack>
+          </Box>
+        )}
+        {hasSentenceMatches && (
+          <Chip
+            label={`${sentenceMatches.length} sentence${
+              sentenceMatches.length === 1 ? "" : "s"
+            }`}
+            size="small"
+            color={isMatchesVisible ? "primary" : "default"}
+            variant={isMatchesVisible ? "filled" : "outlined"}
+            sx={{ mt: 1, alignSelf: "flex-start" }}
+            onClick={handleToggleMatches}
+            onMouseDown={(event) => event.stopPropagation()}
+          />
+        )}
+        {hasSentenceMatches && (
+          <Collapse in={isMatchesVisible} timeout="auto" unmountOnExit>
+            <Stack spacing={0.5} sx={{ mt: 1 }}>
+              {sentenceMatches.map((sentence) => (
+                <Box
+                  key={sentence.id}
+                  sx={{
+                    borderLeft: "2px solid",
+                    borderColor: "divider",
+                    pl: 1,
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={600}>
+                    {sentence.pinyin}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {sentence.english}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Collapse>
+        )}
+      </Box>
     </Box>
   );
 };

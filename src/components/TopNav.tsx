@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   AppBar,
   Avatar,
@@ -14,12 +14,22 @@ import {
   Toolbar,
   Tooltip,
   Typography,
+  ListItemIcon,
+  ListItemText,
+  Divider,
 } from "@mui/material";
-import { Add as AddIcon, Person as PersonIcon } from "@mui/icons-material";
+import {
+  Add as AddIcon,
+  Person as PersonIcon,
+  ArrowBack as ArrowBackIcon,
+  LightMode as LightModeIcon,
+  DarkMode as DarkModeIcon,
+} from "@mui/icons-material";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
+import { ThemeContext } from "@/context/ThemeContext";
 
 // Helper to convert number to Roman numeral
 const toRoman = (num: number): string => {
@@ -60,6 +70,7 @@ export const TopNav: React.FC<TopNavProps> = ({
   const router = useRouter();
   const { user, signOut, isLoading, isAdmin, role } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const themeContext = useContext(ThemeContext);
 
   const handleLogoClick = () => {
     router.push("/");
@@ -83,66 +94,109 @@ export const TopNav: React.FC<TopNavProps> = ({
     router.push("/login");
   };
 
+  const handleBackToCurriculum = () => {
+    router.push("/curriculum");
+  };
+
+  const handleToggleTheme = () => {
+    themeContext?.toggleTheme();
+  };
+
   return (
     <AppBar position="static" elevation={0}>
       <Toolbar sx={{ justifyContent: "space-between" }}>
         {breadcrumb ? (
-          <Breadcrumbs
-            separator={
-              <NavigateNextIcon
-                fontSize="small"
-                sx={{ color: "text.secondary" }}
-              />
-            }
-            sx={{ "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" } }}
-          >
-            {breadcrumb.program && (
-              <Link
-                component="button"
-                underline="hover"
-                onClick={handleLogoClick}
+          <>
+            {/* Mobile: Show back button */}
+            <Box
+              sx={{
+                display: { xs: "flex", md: "none" },
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
+              <IconButton
+                onClick={handleBackToCurriculum}
+                size="small"
                 sx={{
-                  fontWeight: 600,
                   color: "text.primary",
-                  fontSize: "0.95rem",
                   "&:hover": { color: "primary.main" },
                 }}
               >
-                {breadcrumb.program}
-              </Link>
-            )}
-            {breadcrumb.level && (
+                <ArrowBackIcon />
+              </IconButton>
               <Typography
                 sx={{
-                  color: "text.secondary",
-                  fontSize: "0.95rem",
-                }}
-              >
-                Level {toRoman(breadcrumb.level.order)}
-              </Typography>
-            )}
-            {breadcrumb.unit && (
-              <Typography
-                sx={{
-                  color: "text.secondary",
-                  fontSize: "0.95rem",
-                }}
-              >
-                Unit {breadcrumb.unit.order}
-              </Typography>
-            )}
-            {breadcrumb.lesson && (
-              <Typography
-                sx={{
+                  fontWeight: 600,
                   color: "text.primary",
-                  fontWeight: 500,
                   fontSize: "0.95rem",
                 }}
               >
                 {breadcrumb.lesson}
               </Typography>
-            )}
-          </Breadcrumbs>
+            </Box>
+
+            {/* Desktop: Show full breadcrumbs */}
+            <Breadcrumbs
+              separator={
+                <NavigateNextIcon
+                  fontSize="small"
+                  sx={{ color: "text.secondary" }}
+                />
+              }
+              sx={{
+                display: { xs: "none", md: "flex" },
+                "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" },
+              }}
+            >
+              {breadcrumb.program && (
+                <Link
+                  component="button"
+                  underline="hover"
+                  onClick={handleLogoClick}
+                  sx={{
+                    fontWeight: 600,
+                    color: "text.primary",
+                    fontSize: "0.95rem",
+                    "&:hover": { color: "primary.main" },
+                  }}
+                >
+                  {breadcrumb.program}
+                </Link>
+              )}
+              {breadcrumb.level && (
+                <Typography
+                  sx={{
+                    color: "text.secondary",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  Level {toRoman(breadcrumb.level.order)}
+                </Typography>
+              )}
+              {breadcrumb.unit && (
+                <Typography
+                  sx={{
+                    color: "text.secondary",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  Unit {breadcrumb.unit.order}
+                </Typography>
+              )}
+              {breadcrumb.lesson && (
+                <Typography
+                  sx={{
+                    color: "text.primary",
+                    fontWeight: 500,
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  {breadcrumb.lesson}
+                </Typography>
+              )}
+            </Breadcrumbs>
+          </>
         ) : (
           <Typography
             variant="h6"
@@ -193,7 +247,6 @@ export const TopNav: React.FC<TopNavProps> = ({
               </IconButton>
             </Tooltip>
           )}
-          <ThemeToggle />
           {!isLoading && (
             <>
               {user ? (
@@ -258,22 +311,41 @@ export const TopNav: React.FC<TopNavProps> = ({
                         Admin Dashboard
                       </MenuItem>
                     )}
+                    <Divider />
+                    <MenuItem onClick={handleToggleTheme}>
+                      <ListItemIcon>
+                        {themeContext?.mode === "dark" ? (
+                          <LightModeIcon fontSize="small" />
+                        ) : (
+                          <DarkModeIcon fontSize="small" />
+                        )}
+                      </ListItemIcon>
+                      <ListItemText>
+                        {themeContext?.mode === "dark"
+                          ? "Light Mode"
+                          : "Dark Mode"}
+                      </ListItemText>
+                    </MenuItem>
+                    <Divider />
                     <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
                   </Menu>
                 </>
               ) : (
-                <Button
-                  onClick={handleLogin}
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    ml: 1,
-                    textTransform: "none",
-                    fontWeight: 600,
-                  }}
-                >
-                  Sign In
-                </Button>
+                <>
+                  <ThemeToggle />
+                  <Button
+                    onClick={handleLogin}
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      ml: 1,
+                      textTransform: "none",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Sign In
+                  </Button>
+                </>
               )}
             </>
           )}

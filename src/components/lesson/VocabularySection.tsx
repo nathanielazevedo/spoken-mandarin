@@ -24,6 +24,8 @@ import {
   GraphicEq as AudioWaveIcon,
   Translate as TranslateIcon,
   Mic as MicIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
 import type { PracticeEntry } from "../../types/lesson";
 import { PracticeSection } from "./PracticeSection";
@@ -168,6 +170,7 @@ export const VocabularySection: React.FC<VocabularySectionProps> = ({
 }) => {
   const [isListenDialogOpen, setIsListenDialogOpen] = useState(false);
   const [isSpeakDialogOpen, setIsSpeakDialogOpen] = useState(false);
+  const [showHanzi, setShowHanzi] = useState(false);
 
   const handleOpenListenDialog = () => {
     setIsListenDialogOpen(true);
@@ -241,76 +244,19 @@ export const VocabularySection: React.FC<VocabularySectionProps> = ({
           reorderingEnabled && isSavingOrder ? "Saving new order..." : null
         }
         extraActions={
-          hasBulkActions ? (
-            <Stack direction="row" spacing={1} flexWrap="wrap">
-              {showGenerateAudioAction && (
-                <Tooltip title={generateAudioLabel} key="generate-audio">
-                  <span>
-                    <IconButton
-                      color="primary"
-                      onClick={onGenerateMissingAudio}
-                      disabled={
-                        isGeneratingMissingAudio ||
-                        !missingAudioCount ||
-                        !vocabulary.length
-                      }
-                      aria-label="Generate missing audio"
-                      sx={{
-                        border: "1px solid",
-                        borderColor: "divider",
-                        width: 48,
-                        height: 48,
-                      }}
-                    >
-                      {missingAudioCount && missingAudioCount > 0 ? (
-                        <Badge
-                          color="secondary"
-                          badgeContent={missingAudioCount}
-                        >
-                          <AudioWaveIcon />
-                        </Badge>
-                      ) : (
-                        <AudioWaveIcon />
-                      )}
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              )}
-              {showGenerateHanziAction && (
-                <Tooltip title={generateHanziLabel} key="generate-hanzi">
-                  <span>
-                    <IconButton
-                      color="primary"
-                      onClick={onGenerateMissingHanzi}
-                      disabled={
-                        isGeneratingMissingHanzi ||
-                        !missingHanziCount ||
-                        !vocabulary.length
-                      }
-                      aria-label="Generate missing hanzi"
-                      sx={{
-                        border: "1px solid",
-                        borderColor: "divider",
-                        width: 48,
-                        height: 48,
-                      }}
-                    >
-                      {missingHanziCount && missingHanziCount > 0 ? (
-                        <Badge
-                          color="secondary"
-                          badgeContent={missingHanziCount}
-                        >
-                          <TranslateIcon />
-                        </Badge>
-                      ) : (
-                        <TranslateIcon />
-                      )}
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              )}
-            </Stack>
-          ) : undefined
+          <Tooltip title={showHanzi ? "Hide characters" : "Show characters"}>
+            <IconButton
+              onClick={() => setShowHanzi(!showHanzi)}
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                width: 48,
+                height: 48,
+              }}
+            >
+              {showHanzi ? <VisibilityIcon /> : <VisibilityOffIcon />}
+            </IconButton>
+          </Tooltip>
         }
       >
         {vocabulary.length === 0 ? (
@@ -386,6 +332,7 @@ export const VocabularySection: React.FC<VocabularySectionProps> = ({
               generatingHanziId={generatingHanziId}
               showOrderNumbers={showOrderNumbers}
               onMoveWordToLesson={onMoveWordToLesson}
+              showHanzi={showHanzi}
             />
           </>
         )}
@@ -454,6 +401,7 @@ interface VocabularyListContentProps
   > {
   vocabulary: PracticeEntry[];
   searchTerm?: string;
+  showHanzi?: boolean;
 }
 
 const VocabularyListContent: React.FC<VocabularyListContentProps> = ({
@@ -490,6 +438,7 @@ const VocabularyListContent: React.FC<VocabularyListContentProps> = ({
   verificationResults,
   showOrderNumbers = true,
   onMoveWordToLesson,
+  showHanzi = false,
 }) => {
   const {
     editingEntry,
@@ -625,6 +574,7 @@ const VocabularyListContent: React.FC<VocabularyListContentProps> = ({
                   ? () => onMoveWordToLesson(vocab.id)
                   : undefined
               }
+              showHanzi={showHanzi}
             />
           ))}
         </Stack>
