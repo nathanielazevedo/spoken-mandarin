@@ -14,6 +14,7 @@ model Lesson {
   order        Int
   name         String
   description  String?
+  isUnitFinal  Boolean        @default(false) // True if this is the unit's final exam
   createdAt    DateTime       @default(now())
   updatedAt    DateTime
   unit         Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
@@ -79,17 +80,35 @@ model Unit {
 }
 
 model UserProgress {
-  id                String    @id @default(cuid())
+  id                String        @id @default(cuid())
+  userId            String // Supabase user ID
   lessonId          String
-  vocabularyMastery Float     @default(0)
-  sentenceMastery   Float     @default(0)
-  examPassed        Boolean   @default(false)
-  completedAt       DateTime?
-  createdAt         DateTime  @default(now())
+  vocabularyMastery Float         @default(0) // 0-100 percentage
+  sentenceMastery   Float         @default(0) // 0-100 percentage
+  examPassed        Boolean       @default(false)
+  examHighScore     Int? // Best exam score achieved
+  completedAt       DateTime? // When lesson was fully completed
+  createdAt         DateTime      @default(now())
   updatedAt         DateTime
-  lesson            Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson            Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  examAttempts      ExamAttempt[]
 
+  @@unique([userId, lessonId])
+  @@index([userId])
   @@index([lessonId])
+}
+
+model ExamAttempt {
+  id             String       @id @default(cuid())
+  userProgressId String
+  score          Int // Percentage score
+  passed         Boolean
+  timeSpent      Int? // Time in seconds
+  answers        Json? // Store answers for review
+  createdAt      DateTime     @default(now())
+  userProgress   UserProgress @relation(fields: [userProgressId], references: [id], onDelete: Cascade)
+
+  @@index([userProgressId])
 }
 
 model Vocabulary {

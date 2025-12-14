@@ -1,30 +1,21 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/permissions-server';
 
 // PATCH /api/admin/users/[id]/role - Update user role
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { user, error } = await requireAdmin();
+  if (error) return error;
+
   try {
     const { id: userId } = await context.params;
 
-    // Verify the requesting user is an admin
-    const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUserRole = user.user_metadata?.role;
-    if (currentUserRole !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
-    }
-
     // Prevent admin from removing their own admin status
-    if (userId === user.id) {
+    if (userId === user!.id) {
       return NextResponse.json({ error: 'Cannot modify your own role' }, { status: 400 });
     }
 

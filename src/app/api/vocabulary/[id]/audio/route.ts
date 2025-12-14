@@ -43,8 +43,11 @@ const pickRandomVoice = () => {
 
 export async function POST(
   request: Request,
-  context: { params: Promise<{ id?: string | string[] }> }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   try {
     const params = await context.params;
     const rawId = params?.id;

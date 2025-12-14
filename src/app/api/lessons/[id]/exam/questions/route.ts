@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { QuestionType } from '@prisma/client';
+import { requireAdmin } from '@/lib/permissions-server';
 
 // POST /api/lessons/[id]/exam/questions - Add question to exam
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();

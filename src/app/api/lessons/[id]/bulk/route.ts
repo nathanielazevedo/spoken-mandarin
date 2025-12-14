@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/permissions-server';
 
 type RawBulkEntry = {
   pinyin?: unknown;
@@ -42,8 +43,11 @@ const normalizeBulkEntries = (
 
 export async function POST(
   request: Request,
-  context: { params: Promise<{ id?: string | string[] }> }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const params = await context.params;
     const rawId = params?.id;

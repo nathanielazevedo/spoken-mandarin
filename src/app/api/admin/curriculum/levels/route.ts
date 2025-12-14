@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/permissions-server';
 
 // POST /api/admin/curriculum/levels - Create a new level
 export async function POST(request: Request) {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await requireAdmin();
+  if (error) return error;
 
-    if (!user || user.user_metadata?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+  try {
 
     const body = await request.json();
     const { programId, name, description } = body;

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { requireAdmin } from '@/lib/permissions-server';
 
 const DEFAULT_MODEL =
   process.env.OPENAI_SENTENCE_TRANSLATION_MODEL ??
@@ -27,6 +28,9 @@ const translationSchema = {
 };
 
 export async function POST(request: Request) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   try {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(

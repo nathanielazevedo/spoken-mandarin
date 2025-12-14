@@ -30,6 +30,9 @@ export async function POST(
   _request: Request,
   context: { params: Promise<{ id?: string | string[] }> }
 ) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   try {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(

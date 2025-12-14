@@ -20,6 +20,7 @@ import { ExamResult } from "../exam/ExamResult";
 
 interface ExamSectionProps {
   lessonId: string;
+  onExamPassed?: () => void;
 }
 
 interface ExamAttempt {
@@ -28,12 +29,13 @@ interface ExamAttempt {
   completedAt: Date;
 }
 
-export function ExamSection({ lessonId }: ExamSectionProps) {
+export function ExamSection({ lessonId, onExamPassed }: ExamSectionProps) {
   const [exam, setExam] = useState<Exam | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showExam, setShowExam] = useState(false);
   const [examResult, setExamResult] = useState<ExamAttempt | null>(null);
+  const [examStartTime, setExamStartTime] = useState<number | null>(null);
 
   useEffect(() => {
     fetchExam();
@@ -60,17 +62,43 @@ export function ExamSection({ lessonId }: ExamSectionProps) {
     }
   }
 
-  function handleExamComplete(score: number, passed: boolean) {
+  async function handleExamComplete(score: number, passed: boolean) {
+    const timeSpent = examStartTime
+      ? Math.round((Date.now() - examStartTime) / 1000)
+      : undefined;
+
+    // Record the exam attempt
+    try {
+      await fetch(`/api/progress/${lessonId}/exam`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ score, passed, timeSpent }),
+      });
+
+      if (passed && onExamPassed) {
+        onExamPassed();
+      }
+    } catch (err) {
+      console.error("Failed to record exam attempt:", err);
+    }
+
     setExamResult({
       score,
       passed,
       completedAt: new Date(),
     });
     setShowExam(false);
+    setExamStartTime(null);
+  }
+
+  function handleStartExam() {
+    setExamStartTime(Date.now());
+    setShowExam(true);
   }
 
   function handleTryAgain() {
     setExamResult(null);
+    setExamStartTime(Date.now());
     setShowExam(true);
   }
 
@@ -176,11 +204,7 @@ export function ExamSection({ lessonId }: ExamSectionProps) {
         you've learned the material.
       </Typography>
 
-      <Button
-        variant="contained"
-        size="large"
-        onClick={() => setShowExam(true)}
-      >
+      <Button variant="contained" size="large" onClick={handleStartExam}>
         Start Exam
       </Button>
     </Paper>

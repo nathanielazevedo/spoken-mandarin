@@ -1,7 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/permissions-server';
 
 export async function POST(request: Request) {
+  const { error } = await requireAdmin();
+  if (error) return error;
   try {
     const body = await request.json().catch(() => null);
 

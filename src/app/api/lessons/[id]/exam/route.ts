@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/permissions-server';
 
 // GET /api/lessons/[id]/exam - Get exam for a lesson
 export async function GET(
@@ -43,6 +44,9 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -86,13 +90,10 @@ export async function PUT(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await requireAdmin();
+  if (error) return error;
 
-    if (!user || user.user_metadata?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+  try {
 
     const { id: lessonId } = await context.params;
     const body = await request.json();
@@ -121,13 +122,10 @@ export async function DELETE(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await requireAdmin();
+  if (error) return error;
 
-    if (!user || user.user_metadata?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+  try {
 
     const { id: lessonId } = await context.params;
 

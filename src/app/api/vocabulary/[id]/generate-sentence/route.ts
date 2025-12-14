@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/permissions-server';
 
 const DEFAULT_MODEL = process.env.OPENAI_SENTENCE_MODEL ?? 'gpt-4o-mini';
 
@@ -28,6 +29,9 @@ export async function POST(
   _request: Request,
   context: { params: Promise<{ id?: string | string[] }> }
 ) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   try {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
