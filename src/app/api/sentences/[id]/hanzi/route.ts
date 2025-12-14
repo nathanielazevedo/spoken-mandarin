@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/permissions-server';
 
 const DEFAULT_MODEL =
   process.env.OPENAI_SENTENCE_HANZI_MODEL ??

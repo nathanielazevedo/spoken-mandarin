@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
 import { uploadAudioToStorage } from '@/lib/supabase/storage';
+import { requireAdmin } from '@/lib/permissions-server';
 
 const DEFAULT_VOICE = process.env.OPENAI_TTS_VOICE ?? 'alloy';
 const DEFAULT_MODEL = process.env.OPENAI_TTS_MODEL ?? 'gpt-4o-mini-tts';
