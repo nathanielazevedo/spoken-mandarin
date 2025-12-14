@@ -102,44 +102,55 @@ interface ProgressIndicatorProps {
   loading?: boolean;
 }
 
-function ProgressIndicator({ program, isLessonCompleted, loading }: ProgressIndicatorProps) {
+function ProgressIndicator({
+  program,
+  isLessonCompleted,
+  loading,
+}: ProgressIndicatorProps) {
   // Calculate total lessons and completed lessons
   const totalLessons = program.levels.reduce(
-    (acc, level) => acc + level.units.reduce(
-      (unitAcc, unit) => unitAcc + unit.lessons.length, 0
-    ), 0
+    (acc, level) =>
+      acc +
+      level.units.reduce((unitAcc, unit) => unitAcc + unit.lessons.length, 0),
+    0
   );
 
   const completedLessons = program.levels.reduce(
-    (acc, level) => acc + level.units.reduce(
-      (unitAcc, unit) => unitAcc + unit.lessons.filter(
-        (lesson) => isLessonCompleted(lesson.id)
-      ).length, 0
-    ), 0
+    (acc, level) =>
+      acc +
+      level.units.reduce(
+        (unitAcc, unit) =>
+          unitAcc +
+          unit.lessons.filter((lesson) => isLessonCompleted(lesson.id)).length,
+        0
+      ),
+    0
   );
 
-  const progressPercentage = totalLessons > 0 
-    ? Math.round((completedLessons / totalLessons) * 100) 
-    : 0;
+  const progressPercentage =
+    totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
   // Calculate level progress for more detailed view
   const levelProgress = program.levels.map((level) => {
     const levelTotalLessons = level.units.reduce(
-      (acc, unit) => acc + unit.lessons.length, 0
+      (acc, unit) => acc + unit.lessons.length,
+      0
     );
     const levelCompletedLessons = level.units.reduce(
-      (acc, unit) => acc + unit.lessons.filter(
-        (lesson) => isLessonCompleted(lesson.id)
-      ).length, 0
+      (acc, unit) =>
+        acc +
+        unit.lessons.filter((lesson) => isLessonCompleted(lesson.id)).length,
+      0
     );
     return {
       name: level.name,
       order: level.order,
       total: levelTotalLessons,
       completed: levelCompletedLessons,
-      percentage: levelTotalLessons > 0 
-        ? Math.round((levelCompletedLessons / levelTotalLessons) * 100) 
-        : 0,
+      percentage:
+        levelTotalLessons > 0
+          ? Math.round((levelCompletedLessons / levelTotalLessons) * 100)
+          : 0,
     };
   });
 
@@ -238,7 +249,11 @@ function ProgressIndicator({ program, isLessonCompleted, loading }: ProgressIndi
       {/* Level breakdown */}
       {program.levels.length > 1 && (
         <Box sx={{ mt: 2 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ mb: 1, display: "block" }}
+          >
             Progress by Level
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -439,7 +454,7 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
           isLessonCompleted={isLessonCompleted}
           loading={progressLoading}
         />
-        
+
         {/* Levels */}
         {program.levels.map((level) => {
           const levelUnlocked = isLevelUnlocked(level.id);
@@ -605,7 +620,9 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                                   key={lesson.id}
                                   elevation={0}
                                   sx={{
-                                    border: isUnitFinal ? "2px solid" : "1px solid",
+                                    border: isUnitFinal
+                                      ? "2px solid"
+                                      : "1px solid",
                                     borderColor: completed
                                       ? "success.main"
                                       : isUnitFinal
@@ -619,13 +636,16 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                                     bgcolor: completed
                                       ? "success.50"
                                       : isUnitFinal
-                                      ? (theme) => theme.palette.mode === "dark" 
-                                        ? "rgba(237, 137, 54, 0.1)" 
-                                        : "rgba(237, 137, 54, 0.05)"
+                                      ? (theme) =>
+                                          theme.palette.mode === "dark"
+                                            ? "rgba(237, 137, 54, 0.1)"
+                                            : "rgba(237, 137, 54, 0.05)"
                                       : "background.paper",
                                     "&:hover": unlocked
                                       ? {
-                                          borderColor: isUnitFinal ? "warning.dark" : "primary.main",
+                                          borderColor: isUnitFinal
+                                            ? "warning.dark"
+                                            : "primary.main",
                                           boxShadow: isUnitFinal
                                             ? "0 4px 12px rgba(237,137,54,0.2)"
                                             : "0 4px 12px rgba(220,38,38,0.1)",
@@ -673,7 +693,10 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                                               : unlocked
                                               ? "primary.main"
                                               : "grey.400",
-                                            color: completed || isUnitFinal ? "white" : "primary.contrastText",
+                                            color:
+                                              completed || isUnitFinal
+                                                ? "white"
+                                                : "primary.contrastText",
                                             display: "flex",
                                             alignItems: "center",
                                             justifyContent: "center",
@@ -686,7 +709,9 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                                               sx={{ fontSize: 24 }}
                                             />
                                           ) : isUnitFinal ? (
-                                            <EmojiEvents sx={{ fontSize: 24 }} />
+                                            <EmojiEvents
+                                              sx={{ fontSize: 24 }}
+                                            />
                                           ) : unlocked ? (
                                             lesson.order
                                           ) : (
@@ -707,7 +732,11 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                                           >
                                             {isUnitFinal ? (
                                               <Chip
-                                                icon={<EmojiEvents sx={{ fontSize: 14 }} />}
+                                                icon={
+                                                  <EmojiEvents
+                                                    sx={{ fontSize: 14 }}
+                                                  />
+                                                }
                                                 label="Unit Final Exam"
                                                 size="small"
                                                 color="warning"
