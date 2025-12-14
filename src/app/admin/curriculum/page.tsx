@@ -23,7 +23,9 @@ import {
 import {
   ExpandMore as ExpandMoreIcon,
   Add as AddIcon,
+  Quiz as QuizIcon,
 } from "@mui/icons-material";
+import { useRouter } from "next/navigation";
 
 interface Lesson {
   id: string;
@@ -55,6 +57,7 @@ interface Program {
 type DialogType = "level" | "unit" | "lesson";
 
 export default function AdminCurriculumPage() {
+  const router = useRouter();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -336,16 +339,43 @@ export default function AdminCurriculumPage() {
                                   No lessons in this unit.
                                 </Typography>
                               ) : (
-                                <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 1,
+                                  }}
+                                >
                                   {unit.lessons.map((lesson) => (
-                                    <Typography
-                                      component="li"
+                                    <Box
                                       key={lesson.id}
-                                      variant="body2"
-                                      sx={{ py: 0.5 }}
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        py: 1,
+                                        px: 2,
+                                        bgcolor: "grey.50",
+                                        borderRadius: 1,
+                                      }}
                                     >
-                                      {lesson.order}. {lesson.name}
-                                    </Typography>
+                                      <Typography variant="body2">
+                                        {lesson.order}. {lesson.name}
+                                      </Typography>
+                                      <Tooltip title="Manage Exam">
+                                        <IconButton
+                                          size="small"
+                                          onClick={() =>
+                                            router.push(
+                                              `/admin/curriculum/lessons/${lesson.id}/exam`
+                                            )
+                                          }
+                                          color="primary"
+                                        >
+                                          <QuizIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Box>
                                   ))}
                                 </Box>
                               )}

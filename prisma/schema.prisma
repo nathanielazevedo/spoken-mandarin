@@ -20,6 +20,7 @@ model Lesson {
   sentences    Sentence[]
   userProgress UserProgress[]
   vocabulary   Vocabulary[]
+  exam         Exam?
 
   @@unique([unitId, order])
   @@index([unitId])
@@ -102,4 +103,46 @@ model Vocabulary {
   lesson   Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@index([lessonId])
+}
+
+// Exam system
+enum QuestionType {
+  LISTENING // Play audio, user types what they hear
+  TRANSLATE_TO_ENGLISH // Show Chinese, user types English
+  TRANSLATE_TO_CHINESE // Show English, user types Chinese (pinyin)
+  FILL_BLANK // Sentence with blank, user fills in
+  MULTIPLE_CHOICE // Question with 4 options
+  SPEAKING // User records themselves saying a phrase
+}
+
+model Exam {
+  id           String         @id @default(cuid())
+  lessonId     String         @unique
+  title        String?
+  description  String?
+  passingScore Int            @default(80) // Percentage needed to pass
+  timeLimit    Int? // Time limit in minutes (null = no limit)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  lesson       Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions    ExamQuestion[]
+}
+
+model ExamQuestion {
+  id             String       @id @default(cuid())
+  examId         String
+  order          Int
+  type           QuestionType
+  prompt         String // The question text or reference
+  promptAudioUrl String? // Audio for listening questions
+  correctAnswer  String // The expected answer
+  options        String[] // For multiple choice (array of options)
+  explanation    String? // Explanation shown after answering
+  points         Int          @default(1)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  exam           Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, order])
+  @@index([examId])
 }

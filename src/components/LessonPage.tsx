@@ -20,6 +20,7 @@ import { AddVocabularyDialog } from "./lesson/dialogs/AddVocabularyDialog";
 import { AddSentenceDialog } from "./lesson/dialogs/AddSentenceDialog";
 import { BulkUploadDialog } from "./lesson/dialogs/BulkUploadDialog";
 import { MoveToLessonDialog } from "./lesson/dialogs/MoveToLessonDialog";
+import { ExamSection } from "./lesson/ExamSection";
 import { normalizePinyinWord } from "../utils/pinyin";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadLessonFromCache, saveLessonToCache } from "../utils/offlineCache";
@@ -739,6 +740,9 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
               canEditLesson ? handleOpenMoveSentenceDialog : undefined
             }
           />
+
+          {/* Exam Section */}
+          {resolvedLessonId && <ExamSection lessonId={resolvedLessonId} />}
 
           {canEditLesson && (
             <AddVocabularyDialog
