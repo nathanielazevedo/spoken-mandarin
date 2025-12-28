@@ -8,29 +8,22 @@ import {
   Card,
   CardContent,
   CardActionArea,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Chip,
   Stack,
   Skeleton,
   Alert,
   LinearProgress,
   Tooltip,
   Paper,
-  CircularProgress,
   Button,
+  Chip,
+  CircularProgress,
 } from "@mui/material";
 import {
-  ExpandMore,
   School,
-  MenuBook,
-  PlayLesson,
   CheckCircle,
   Lock,
-  EmojiEvents,
-  WorkspacePremium,
   Login,
+  EmojiEvents,
 } from "@mui/icons-material";
 import { TopNav } from "./TopNav";
 import { useProgress } from "../hooks/useProgress";
@@ -291,8 +284,6 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
   const [curriculum, setCurriculum] = useState<Program[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedLevel, setExpandedLevel] = useState<string | false>(false);
-  const [expandedUnit, setExpandedUnit] = useState<string | false>(false);
 
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -300,7 +291,6 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
   const {
     isLessonUnlocked,
     isLessonCompleted,
-    isUnitUnlocked,
     isLevelUnlocked,
     loading: progressLoading,
   } = useProgress();
@@ -316,14 +306,6 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
         }
         const data = await response.json();
         setCurriculum(data);
-
-        // Auto-expand first level and unit if available
-        if (data[0]?.levels?.[0]) {
-          setExpandedLevel(data[0].levels[0].id);
-          if (data[0].levels[0].units?.[0]) {
-            setExpandedUnit(data[0].levels[0].units[0].id);
-          }
-        }
       } catch (err) {
         setError((err as Error).message || "An unexpected error occurred");
       } finally {
@@ -348,16 +330,6 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
       window.location.href = `/lesson/${lessonId}`;
     }
   };
-
-  const handleLevelChange =
-    (levelId: string) => (_: React.SyntheticEvent, isExpanded: boolean) => {
-      setExpandedLevel(isExpanded ? levelId : false);
-    };
-
-  const handleUnitChange =
-    (unitId: string) => (_: React.SyntheticEvent, isExpanded: boolean) => {
-      setExpandedUnit(isExpanded ? unitId : false);
-    };
 
   if (isLoading || authLoading) {
     return (
@@ -542,405 +514,105 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
         />
 
         {/* Levels */}
-        {program.levels.map((level) => {
-          const levelUnlocked = isLevelUnlocked(level.id);
-          const levelCompleted = level.units.every((unit) =>
-            unit.lessons.every((lesson) => isLessonCompleted(lesson.id))
-          );
+        <Stack spacing={2}>
+          {program.levels.map((level) => {
+            const levelUnlocked = isLevelUnlocked(level.id);
+            const levelCompleted = level.units.every((unit) =>
+              unit.lessons.every((lesson) => isLessonCompleted(lesson.id))
+            );
+            const totalLessons = level.units.reduce(
+              (acc, u) => acc + u.lessons.length,
+              0
+            );
+            const completedLessonsInLevel = level.units.reduce(
+              (acc, u) =>
+                acc + u.lessons.filter((l) => isLessonCompleted(l.id)).length,
+              0
+            );
 
-          return (
-            <Accordion
-              key={level.id}
-              expanded={expandedLevel === level.id}
-              onChange={handleLevelChange(level.id)}
-              disabled={!levelUnlocked}
-              sx={{
-                mb: 2,
-                borderRadius: 2,
-                "&:before": { display: "none" },
-                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                "&.Mui-disabled": {
-                  opacity: "1 !important",
-                  backgroundColor: "transparent",
-                },
-                "&.Mui-expanded": {
-                  boxShadow: "0 4px 16px rgba(220,38,38,0.15)",
-                },
-              }}
-            >
-              <AccordionSummary
-                expandIcon={levelUnlocked ? <ExpandMore /> : <Lock />}
+            return (
+              <Card
+                key={level.id}
+                elevation={0}
                 sx={{
-                  bgcolor:
-                    expandedLevel === level.id
-                      ? "primary.main"
-                      : "background.paper",
-                  color:
-                    expandedLevel === level.id
-                      ? "primary.contrastText"
-                      : "text.primary",
-                  borderRadius: "8px 8px 0 0",
-                  transition: "background-color 0.3s ease, color 0.3s ease",
+                  border: "2px solid",
+                  borderColor: levelCompleted ? "success.main" : "divider",
+                  opacity: levelUnlocked ? 1 : 0.6,
+                  transition: "all 0.2s ease",
                   "&:hover": {
-                    bgcolor:
-                      expandedLevel === level.id
-                        ? "primary.dark"
-                        : "action.hover",
-                  },
-                  "& .MuiAccordionSummary-expandIconWrapper": {
-                    color:
-                      expandedLevel === level.id
-                        ? "primary.contrastText"
-                        : "text.secondary",
+                    borderColor: levelUnlocked ? "primary.main" : "divider",
+                    boxShadow: levelUnlocked ? 3 : 0,
                   },
                 }}
               >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <School />
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                      Level {toRoman(level.order)}: {level.name}
-                    </Typography>
-                    <Typography
-                      variant="body2"
+                <CardActionArea
+                  onClick={() =>
+                    levelUnlocked &&
+                    router.push(`/curriculum/level/${level.id}`)
+                  }
+                  disabled={!levelUnlocked}
+                >
+                  <CardContent sx={{ p: 3 }}>
+                    <Box
                       sx={{
-                        color:
-                          expandedLevel === level.id
-                            ? "inherit"
-                            : "text.secondary",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        mb: 2,
                       }}
                     >
-                      {level.units.length} units •{" "}
-                      {level.units.reduce(
-                        (acc, u) => acc + u.lessons.length,
-                        0
-                      )}{" "}
-                      lessons
-                    </Typography>
-                  </Box>
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails sx={{ p: 2, bgcolor: "background.paper" }}>
-                {/* Units within Level */}
-                <Stack spacing={0}>
-                  {level.units.map((unit, unitIndex) => {
-                    const unitUnlocked = isUnitUnlocked(unit.id);
-                    const unitCompleted = unit.lessons.every((lesson) =>
-                      isLessonCompleted(lesson.id)
-                    );
-
-                    return (
-                      <Accordion
-                        key={unit.id}
-                        expanded={expandedUnit === unit.id}
-                        onChange={handleUnitChange(unit.id)}
-                        disabled={!unitUnlocked}
-                        sx={{
-                          "&:before": { display: "none" },
-                          boxShadow: "none",
-                          border: "1px solid",
-                          borderColor: "divider",
-                          borderTop: unitIndex === 0 ? "1px solid" : "none",
-                          borderTopColor: "divider",
-                          borderRadius:
-                            unitIndex === 0 &&
-                            unitIndex === level.units.length - 1
-                              ? 2
-                              : unitIndex === 0
-                              ? "8px 8px 0 0"
-                              : unitIndex === level.units.length - 1
-                              ? "0 0 8px 8px"
-                              : 0,
-                          overflow: "hidden",
-                          "&.Mui-disabled": {
-                            opacity: "1 !important",
-                            backgroundColor: "transparent",
-                          },
-                        }}
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 2 }}
                       >
-                        <AccordionSummary
-                          expandIcon={unitUnlocked ? <ExpandMore /> : <Lock />}
-                          sx={{
-                            bgcolor:
-                              expandedUnit === unit.id
-                                ? "action.selected"
-                                : "background.paper",
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 2,
-                            }}
-                          >
-                            {unitCompleted ? (
-                              <CheckCircle color="success" />
-                            ) : (
-                              <MenuBook
-                                color={unitUnlocked ? "primary" : "disabled"}
-                              />
-                            )}
-                            <Box>
-                              <Typography
-                                variant="subtitle1"
-                                sx={{ fontWeight: 600 }}
-                              >
-                                Unit {unit.order}: {unit.name}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                {unit.lessons.length} lessons
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </AccordionSummary>
-                        <AccordionDetails sx={{ p: 2 }}>
-                          {/* Lessons within Unit */}
-                          <Stack spacing={1.5}>
-                            {unit.lessons.map((lesson, index) => {
-                              const unlocked = isLessonUnlocked(lesson.id);
-                              const completed = isLessonCompleted(lesson.id);
-                              const isUnitFinal = lesson.isUnitFinal;
-                              const isLevelFinal = lesson.isLevelFinal;
-
-                              return (
-                                <Card
-                                  key={lesson.id}
-                                  elevation={0}
-                                  sx={{
-                                    border: isLevelFinal
-                                      ? "3px solid"
-                                      : isUnitFinal
-                                      ? "2px solid"
-                                      : "1px solid",
-                                    borderColor: completed
-                                      ? "success.main"
-                                      : isLevelFinal
-                                      ? "secondary.main"
-                                      : isUnitFinal
-                                      ? "warning.main"
-                                      : unlocked
-                                      ? "divider"
-                                      : "divider",
-                                    borderRadius: 2,
-                                    transition: "all 0.2s ease",
-                                    bgcolor: completed
-                                      ? "success.50"
-                                      : isLevelFinal
-                                      ? (theme) =>
-                                          theme.palette.mode === "dark"
-                                            ? "rgba(156, 39, 176, 0.15)"
-                                            : "rgba(156, 39, 176, 0.08)"
-                                      : isUnitFinal
-                                      ? (theme) =>
-                                          theme.palette.mode === "dark"
-                                            ? "rgba(237, 137, 54, 0.1)"
-                                            : "rgba(237, 137, 54, 0.05)"
-                                      : "background.paper",
-                                    "&:hover": unlocked
-                                      ? {
-                                          borderColor: isLevelFinal
-                                            ? "secondary.dark"
-                                            : isUnitFinal
-                                            ? "warning.dark"
-                                            : "primary.main",
-                                          boxShadow: isLevelFinal
-                                            ? "0 4px 16px rgba(156,39,176,0.25)"
-                                            : isUnitFinal
-                                            ? "0 4px 12px rgba(237,137,54,0.2)"
-                                            : "0 4px 12px rgba(220,38,38,0.1)",
-                                          transform: "translateX(4px)",
-                                        }
-                                      : {},
-                                  }}
-                                >
-                                  <Tooltip
-                                    title={
-                                      !unlocked
-                                        ? "Complete previous lessons to unlock"
-                                        : ""
-                                    }
-                                    placement="top"
-                                  >
-                                    <CardActionArea
-                                      onClick={() =>
-                                        handleLessonClick(lesson.id)
-                                      }
-                                      disabled={!unlocked}
-                                      sx={{
-                                        cursor: unlocked
-                                          ? "pointer"
-                                          : "not-allowed",
-                                        "&.Mui-disabled": {
-                                          opacity: "1 !important",
-                                        },
-                                      }}
-                                    >
-                                      <CardContent
-                                        sx={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 2,
-                                          py: 1.5,
-                                        }}
-                                      >
-                                        <Box
-                                          sx={{
-                                            width: 40,
-                                            height: 40,
-                                            borderRadius: "50%",
-                                            bgcolor: completed
-                                              ? "success.main"
-                                              : isLevelFinal
-                                              ? "secondary.main"
-                                              : isUnitFinal
-                                              ? "warning.main"
-                                              : unlocked
-                                              ? "primary.main"
-                                              : "grey.400",
-                                            color:
-                                              completed ||
-                                              isLevelFinal ||
-                                              isUnitFinal
-                                                ? "white"
-                                                : "primary.contrastText",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            fontWeight: 700,
-                                            fontSize: "1rem",
-                                          }}
-                                        >
-                                          {completed ? (
-                                            <CheckCircle
-                                              sx={{ fontSize: 24 }}
-                                            />
-                                          ) : isLevelFinal ? (
-                                            <WorkspacePremium
-                                              sx={{ fontSize: 24 }}
-                                            />
-                                          ) : isUnitFinal ? (
-                                            <EmojiEvents
-                                              sx={{ fontSize: 24 }}
-                                            />
-                                          ) : unlocked ? (
-                                            lesson.order
-                                          ) : (
-                                            <Lock sx={{ fontSize: 20 }} />
-                                          )}
-                                        </Box>
-                                        <Box sx={{ flex: 1 }}>
-                                          <Typography
-                                            variant="subtitle2"
-                                            sx={{ fontWeight: 600 }}
-                                          >
-                                            {lesson.name}
-                                          </Typography>
-                                          <Stack
-                                            direction="row"
-                                            spacing={1}
-                                            sx={{ mt: 0.5 }}
-                                          >
-                                            {isLevelFinal ? (
-                                              <Chip
-                                                icon={
-                                                  <WorkspacePremium
-                                                    sx={{ fontSize: 14 }}
-                                                  />
-                                                }
-                                                label="Level Final Exam"
-                                                size="small"
-                                                color="secondary"
-                                                sx={{
-                                                  height: 20,
-                                                  fontSize: "0.7rem",
-                                                  fontWeight: 700,
-                                                  "& .MuiChip-icon": {
-                                                    fontSize: 14,
-                                                  },
-                                                }}
-                                              />
-                                            ) : isUnitFinal ? (
-                                              <Chip
-                                                icon={
-                                                  <EmojiEvents
-                                                    sx={{ fontSize: 14 }}
-                                                  />
-                                                }
-                                                label="Unit Final Exam"
-                                                size="small"
-                                                color="warning"
-                                                sx={{
-                                                  height: 20,
-                                                  fontSize: "0.7rem",
-                                                  "& .MuiChip-icon": {
-                                                    fontSize: 14,
-                                                  },
-                                                }}
-                                              />
-                                            ) : (
-                                              <>
-                                                <Chip
-                                                  label={`${lesson._count.vocabulary} words`}
-                                                  size="small"
-                                                  sx={{
-                                                    height: 20,
-                                                    fontSize: "0.7rem",
-                                                    bgcolor: "action.hover",
-                                                  }}
-                                                />
-                                                <Chip
-                                                  label={`${lesson._count.sentences} sentences`}
-                                                  size="small"
-                                                  sx={{
-                                                    height: 20,
-                                                    fontSize: "0.7rem",
-                                                    bgcolor: "action.hover",
-                                                  }}
-                                                />
-                                              </>
-                                            )}
-                                            {completed && (
-                                              <Chip
-                                                label="Completed"
-                                                size="small"
-                                                color="success"
-                                                sx={{
-                                                  height: 20,
-                                                  fontSize: "0.7rem",
-                                                }}
-                                              />
-                                            )}
-                                          </Stack>
-                                        </Box>
-                                        {unlocked ? (
-                                          <PlayLesson
-                                            color={
-                                              completed ? "success" : "action"
-                                            }
-                                          />
-                                        ) : (
-                                          <Lock color="disabled" />
-                                        )}
-                                      </CardContent>
-                                    </CardActionArea>
-                                  </Tooltip>
-                                </Card>
-                              );
-                            })}
-                          </Stack>
-                        </AccordionDetails>
-                      </Accordion>
-                    );
-                  })}
-                </Stack>
-              </AccordionDetails>
-            </Accordion>
-          );
-        })}
+                        {levelCompleted ? (
+                          <CheckCircle color="success" sx={{ fontSize: 40 }} />
+                        ) : levelUnlocked ? (
+                          <School color="primary" sx={{ fontSize: 40 }} />
+                        ) : (
+                          <Lock color="disabled" sx={{ fontSize: 40 }} />
+                        )}
+                        <Box>
+                          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                            Level {toRoman(level.order)}: {level.name}
+                          </Typography>
+                          {level.description && (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ mt: 0.5 }}
+                            >
+                              {level.description}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </Box>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        {level.units.length} units • {totalLessons} lessons
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color={
+                          levelCompleted ? "success.main" : "text.secondary"
+                        }
+                        sx={{ fontWeight: 600 }}
+                      >
+                        {completedLessonsInLevel}/{totalLessons} completed
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            );
+          })}
+        </Stack>
       </Container>
     </Box>
   );

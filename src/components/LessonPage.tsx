@@ -570,10 +570,18 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
         breadcrumb={{
           program: lesson.program?.name,
           level: lesson.level
-            ? { order: lesson.level.order, name: lesson.level.name }
+            ? {
+                id: lesson.level.id,
+                order: lesson.level.order,
+                name: lesson.level.name,
+              }
             : undefined,
           unit: lesson.unit
-            ? { order: lesson.unit.order, name: lesson.unit.name }
+            ? {
+                id: lesson.unit.id,
+                order: lesson.unit.order,
+                name: lesson.unit.name,
+              }
             : undefined,
           lesson: lesson.name,
         }}

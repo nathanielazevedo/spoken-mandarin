@@ -5,8 +5,8 @@ const config: CapacitorConfig = {
   appName: 'Spoken Mandarin',
   webDir: 'out',
   server: {
-    url: 'https://language-livid.vercel.app',
-    cleartext: false,
+    url: 'http://localhost:3000',
+    cleartext: true,
   },
   ios: {
     contentInset: 'automatic',

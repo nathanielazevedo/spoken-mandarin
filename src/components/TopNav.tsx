@@ -56,8 +56,8 @@ export interface TopNavProps {
   isCreatingLesson?: boolean;
   breadcrumb?: {
     program?: string;
-    level?: { order: number; name: string };
-    unit?: { order: number; name: string };
+    level?: { id: string; order: number; name: string };
+    unit?: { id: string; order: number; name: string };
     lesson?: string;
   };
 }
@@ -98,6 +98,24 @@ export const TopNav: React.FC<TopNavProps> = ({
     router.push("/curriculum");
   };
 
+  const handleBack = () => {
+    if (breadcrumb?.lesson && breadcrumb?.unit && breadcrumb?.level) {
+      // From lesson, go back to unit
+      router.push(
+        `/curriculum/level/${breadcrumb.level.id}/unit/${breadcrumb.unit.id}`
+      );
+    } else if (breadcrumb?.unit && breadcrumb?.level) {
+      // From unit, go back to level
+      router.push(`/curriculum/level/${breadcrumb.level.id}`);
+    } else if (breadcrumb?.level) {
+      // From level, go back to curriculum
+      router.push("/curriculum");
+    } else {
+      // Default to curriculum
+      router.push("/curriculum");
+    }
+  };
+
   const handleToggleTheme = () => {
     themeContext?.toggleTheme();
   };
@@ -116,7 +134,7 @@ export const TopNav: React.FC<TopNavProps> = ({
               }}
             >
               <IconButton
-                onClick={handleBackToCurriculum}
+                onClick={handleBack}
                 size="small"
                 sx={{
                   color: "text.primary",
@@ -165,24 +183,40 @@ export const TopNav: React.FC<TopNavProps> = ({
                 </Link>
               )}
               {breadcrumb.level && (
-                <Typography
+                <Link
+                  component="button"
+                  underline="hover"
+                  onClick={() =>
+                    router.push(`/curriculum/level/${breadcrumb.level!.id}`)
+                  }
                   sx={{
                     color: "text.secondary",
                     fontSize: "0.95rem",
+                    "&:hover": { color: "primary.main" },
                   }}
                 >
                   Level {toRoman(breadcrumb.level.order)}
-                </Typography>
+                </Link>
               )}
-              {breadcrumb.unit && (
-                <Typography
+              {breadcrumb.unit && breadcrumb.level && (
+                <Link
+                  component="button"
+                  underline="hover"
+                  onClick={() =>
+                    router.push(
+                      `/curriculum/level/${breadcrumb.level!.id}/unit/${
+                        breadcrumb.unit!.id
+                      }`
+                    )
+                  }
                   sx={{
                     color: "text.secondary",
                     fontSize: "0.95rem",
+                    "&:hover": { color: "primary.main" },
                   }}
                 >
                   Unit {breadcrumb.unit.order}
-                </Typography>
+                </Link>
               )}
               {breadcrumb.lesson && (
                 <Typography
