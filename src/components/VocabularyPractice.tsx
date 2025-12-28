@@ -418,22 +418,19 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
       sx={{
         position: "fixed",
         inset: 0,
-        bgcolor: "rgba(0, 0, 0, 0.86)",
-        backdropFilter: "blur(2px)",
+        bgcolor: "background.default",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        flexDirection: "column",
         zIndex: 1300,
-        p: { xs: 1, sm: 2 },
+        overflow: "hidden",
       }}
     >
-      <Card
+      <Box
         sx={{
-          width: "100%",
-          maxWidth: 640,
-          maxHeight: "92vh",
           display: "flex",
           flexDirection: "column",
+          height: "100%",
+          width: "100%",
         }}
       >
         <Stack
@@ -481,8 +478,8 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
             justifyContent="flex-end"
             sx={{
               flex: 1,
-              minHeight: 40,
-              gap: 1,
+              minHeight: { xs: 32, sm: 40 },
+              gap: { xs: 0.5, sm: 1 },
               alignItems: "center",
             }}
           >
@@ -549,8 +546,11 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
             flex: 1,
             display: "flex",
             flexDirection: "column",
-            justifyContent: "center",
+            justifyContent:
+              hasSessionStarted && !completed ? "flex-start" : "center",
             gap: 2,
+            overflow: "auto",
+            WebkitOverflowScrolling: "touch",
           }}
         >
           {!hasSessionStarted && (
@@ -605,6 +605,11 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                 size="large"
                 onClick={startPractice}
                 disabled={!selectedCount}
+                sx={{
+                  py: { xs: 1.5, sm: 1 },
+                  fontSize: { xs: "1rem", sm: "0.875rem" },
+                  minHeight: { xs: 48, sm: 42 },
+                }}
               >
                 Start practice
               </Button>
@@ -669,7 +674,10 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
           )}
 
           {hasSessionStarted && !completed && currentWord && (
-            <Stack spacing={2}>
+            <Stack
+              spacing={3}
+              sx={{ width: "100%", maxWidth: 600, mx: "auto" }}
+            >
               {isPaused && (
                 <Chip
                   label="Practice paused"
@@ -677,19 +685,35 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                   variant="outlined"
                 />
               )}
-              <Typography variant="h4" textAlign="center">
+              <Typography
+                variant="h4"
+                textAlign="center"
+                sx={{
+                  fontSize: { xs: "2rem", sm: "2.125rem" },
+                  fontWeight: 600,
+                  mt: { xs: 2, sm: 0 },
+                }}
+              >
                 {currentWord.english}
               </Typography>
               <Box
                 sx={{
-                  minHeight: 48,
+                  minHeight: { xs: 60, sm: 80 },
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
                 }}
               >
                 {revealed && (
-                  <Typography variant="h4" textAlign="center" color="primary">
+                  <Typography
+                    variant="h3"
+                    textAlign="center"
+                    color="primary"
+                    sx={{
+                      fontSize: { xs: "2.5rem", sm: "3rem" },
+                      fontWeight: 700,
+                    }}
+                  >
                     {currentWord.pinyin}
                   </Typography>
                 )}
@@ -702,6 +726,23 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                 onChange={(event) => setUserInput(event.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={timeUp || isLocked || isPaused}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                inputMode="text"
+                sx={{
+                  "& .MuiInputBase-root": {
+                    fontSize: { xs: "1.25rem", sm: "1.125rem" },
+                  },
+                  "& .MuiInputBase-input": {
+                    textAlign: "center",
+                    py: { xs: 2, sm: 1.5 },
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: { xs: "1.125rem", sm: "1rem" },
+                  },
+                }}
               />
               <Stack spacing={2}>
                 <Button
@@ -709,6 +750,13 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                   onClick={handleSubmit}
                   disabled={!userInput.trim() || timeUp || isLocked || isPaused}
                   fullWidth
+                  size="large"
+                  sx={{
+                    py: 2,
+                    fontSize: { xs: "1.125rem", sm: "1rem" },
+                    minHeight: 56,
+                    fontWeight: 600,
+                  }}
                 >
                   {retryMode ? "Submit" : "Check answer"}
                 </Button>
@@ -747,7 +795,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
             </Stack>
           )}
         </Box>
-      </Card>
+      </Box>
     </Box>
   );
 };
