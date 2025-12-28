@@ -603,15 +603,6 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
         }}
       >
         <Box sx={{ maxWidth: 1100, mx: "auto", width: "100%" }}>
-          <LessonHero
-            title={lesson.name}
-            description={lesson.description}
-            onBackClick={handleBackClick}
-            onBulkUploadClick={
-              canEditLesson ? handleOpenBulkUploadDialog : undefined
-            }
-          />
-
           {actionError && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {actionError}

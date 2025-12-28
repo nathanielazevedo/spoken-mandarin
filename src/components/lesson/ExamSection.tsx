@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Box,
   Paper,
@@ -30,6 +31,7 @@ interface ExamAttempt {
 }
 
 export function ExamSection({ lessonId, onExamPassed }: ExamSectionProps) {
+  const router = useRouter();
   const [exam, setExam] = useState<Exam | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,8 +94,7 @@ export function ExamSection({ lessonId, onExamPassed }: ExamSectionProps) {
   }
 
   function handleStartExam() {
-    setExamStartTime(Date.now());
-    setShowExam(true);
+    router.push(`/lesson/${lessonId}/exam`);
   }
 
   function handleTryAgain() {
@@ -199,12 +200,13 @@ export function ExamSection({ lessonId, onExamPassed }: ExamSectionProps) {
         )}
       </Box>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Test your knowledge of this lesson! Complete the exam to see how well
-        you've learned the material.
-      </Typography>
-
-      <Button variant="contained" size="large" onClick={handleStartExam}>
+      <Button
+        variant="contained"
+        size="large"
+        onClick={handleStartExam}
+        fullWidth
+        sx={{ maxWidth: { sm: "200px" } }}
+      >
         Start Exam
       </Button>
     </Paper>
