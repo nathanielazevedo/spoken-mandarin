@@ -15,6 +15,7 @@ model Lesson {
   name         String
   description  String?
   isUnitFinal  Boolean        @default(false) // True if this is the unit's final exam
+  isLevelFinal Boolean        @default(false) // True if this is the level's final exam
   createdAt    DateTime       @default(now())
   updatedAt    DateTime
   unit         Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)

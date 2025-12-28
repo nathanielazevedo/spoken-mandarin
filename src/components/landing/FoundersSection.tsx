@@ -59,28 +59,20 @@ export function FoundersSection() {
               <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
                 {/* Avatar */}
                 <Box
+                  component="img"
+                  src="/nate_headshot.jpeg"
+                  alt="Nate Azevedo"
                   sx={{
                     width: 80,
                     height: 80,
                     borderRadius: "50%",
-                    bgcolor: "grey.100",
                     border: 3,
                     borderColor: "error.light",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
                     flexShrink: 0,
                     boxShadow: "0 4px 12px rgba(220,38,38,0.15)",
+                    objectFit: "cover",
                   }}
-                >
-                  <Typography
-                    variant="h5"
-                    color="text.secondary"
-                    sx={{ fontWeight: 700 }}
-                  >
-                    NA
-                  </Typography>
-                </Box>
+                />
 
                 {/* Content */}
                 <Box sx={{ flex: 1 }}>

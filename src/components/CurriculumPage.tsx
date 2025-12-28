@@ -29,6 +29,7 @@ import {
   CheckCircle,
   Lock,
   EmojiEvents,
+  WorkspacePremium,
   Login,
 } from "@mui/icons-material";
 import { TopNav } from "./TopNav";
@@ -43,6 +44,7 @@ interface Lesson {
   name: string;
   description: string | null;
   isUnitFinal: boolean;
+  isLevelFinal: boolean;
   _count: {
     vocabulary: number;
     sentences: number;
@@ -165,10 +167,8 @@ function ProgressIndicator({
         p: 3,
         mb: 3,
         borderRadius: 3,
-        background: (theme) =>
-          theme.palette.mode === "dark"
-            ? "linear-gradient(135deg, rgba(220,38,38,0.15) 0%, rgba(30,30,30,0.95) 100%)"
-            : "linear-gradient(135deg, rgba(220,38,38,0.1) 0%, rgba(255,255,255,0.95) 100%)",
+        background: "background.paper",
+
         border: "1px solid",
         borderColor: "divider",
       }}
@@ -559,7 +559,10 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                 borderRadius: 2,
                 "&:before": { display: "none" },
                 boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                opacity: levelUnlocked ? 1 : 0.6,
+                "&.Mui-disabled": {
+                  opacity: "1 !important",
+                  backgroundColor: "transparent",
+                },
                 "&.Mui-expanded": {
                   boxShadow: "0 4px 16px rgba(220,38,38,0.15)",
                 },
@@ -576,9 +579,8 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                     expandedLevel === level.id
                       ? "primary.contrastText"
                       : "text.primary",
-                  borderRadius:
-                    expandedLevel === level.id ? "8px 8px 0 0" : "8px",
-                  transition: "all 0.3s ease",
+                  borderRadius: "8px 8px 0 0",
+                  transition: "background-color 0.3s ease, color 0.3s ease",
                   "&:hover": {
                     bgcolor:
                       expandedLevel === level.id
@@ -602,7 +604,6 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                     <Typography
                       variant="body2"
                       sx={{
-                        opacity: 0.8,
                         color:
                           expandedLevel === level.id
                             ? "inherit"
@@ -651,7 +652,10 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                               ? "0 0 8px 8px"
                               : 0,
                           overflow: "hidden",
-                          opacity: unitUnlocked ? 1 : 0.6,
+                          "&.Mui-disabled": {
+                            opacity: "1 !important",
+                            backgroundColor: "transparent",
+                          },
                         }}
                       >
                         <AccordionSummary
@@ -700,17 +704,22 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                               const unlocked = isLessonUnlocked(lesson.id);
                               const completed = isLessonCompleted(lesson.id);
                               const isUnitFinal = lesson.isUnitFinal;
+                              const isLevelFinal = lesson.isLevelFinal;
 
                               return (
                                 <Card
                                   key={lesson.id}
                                   elevation={0}
                                   sx={{
-                                    border: isUnitFinal
+                                    border: isLevelFinal
+                                      ? "3px solid"
+                                      : isUnitFinal
                                       ? "2px solid"
                                       : "1px solid",
                                     borderColor: completed
                                       ? "success.main"
+                                      : isLevelFinal
+                                      ? "secondary.main"
                                       : isUnitFinal
                                       ? "warning.main"
                                       : unlocked
@@ -718,9 +727,13 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                                       : "divider",
                                     borderRadius: 2,
                                     transition: "all 0.2s ease",
-                                    opacity: unlocked ? 1 : 0.6,
                                     bgcolor: completed
                                       ? "success.50"
+                                      : isLevelFinal
+                                      ? (theme) =>
+                                          theme.palette.mode === "dark"
+                                            ? "rgba(156, 39, 176, 0.15)"
+                                            : "rgba(156, 39, 176, 0.08)"
                                       : isUnitFinal
                                       ? (theme) =>
                                           theme.palette.mode === "dark"
@@ -729,10 +742,14 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                                       : "background.paper",
                                     "&:hover": unlocked
                                       ? {
-                                          borderColor: isUnitFinal
+                                          borderColor: isLevelFinal
+                                            ? "secondary.dark"
+                                            : isUnitFinal
                                             ? "warning.dark"
                                             : "primary.main",
-                                          boxShadow: isUnitFinal
+                                          boxShadow: isLevelFinal
+                                            ? "0 4px 16px rgba(156,39,176,0.25)"
+                                            : isUnitFinal
                                             ? "0 4px 12px rgba(237,137,54,0.2)"
                                             : "0 4px 12px rgba(220,38,38,0.1)",
                                           transform: "translateX(4px)",
@@ -757,6 +774,9 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                                         cursor: unlocked
                                           ? "pointer"
                                           : "not-allowed",
+                                        "&.Mui-disabled": {
+                                          opacity: "1 !important",
+                                        },
                                       }}
                                     >
                                       <CardContent
@@ -774,13 +794,17 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                                             borderRadius: "50%",
                                             bgcolor: completed
                                               ? "success.main"
+                                              : isLevelFinal
+                                              ? "secondary.main"
                                               : isUnitFinal
                                               ? "warning.main"
                                               : unlocked
                                               ? "primary.main"
                                               : "grey.400",
                                             color:
-                                              completed || isUnitFinal
+                                              completed ||
+                                              isLevelFinal ||
+                                              isUnitFinal
                                                 ? "white"
                                                 : "primary.contrastText",
                                             display: "flex",
@@ -792,6 +816,10 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                                         >
                                           {completed ? (
                                             <CheckCircle
+                                              sx={{ fontSize: 24 }}
+                                            />
+                                          ) : isLevelFinal ? (
+                                            <WorkspacePremium
                                               sx={{ fontSize: 24 }}
                                             />
                                           ) : isUnitFinal ? (
@@ -816,7 +844,26 @@ export const CurriculumPage: React.FC<CurriculumPageProps> = ({
                                             spacing={1}
                                             sx={{ mt: 0.5 }}
                                           >
-                                            {isUnitFinal ? (
+                                            {isLevelFinal ? (
+                                              <Chip
+                                                icon={
+                                                  <WorkspacePremium
+                                                    sx={{ fontSize: 14 }}
+                                                  />
+                                                }
+                                                label="Level Final Exam"
+                                                size="small"
+                                                color="secondary"
+                                                sx={{
+                                                  height: 20,
+                                                  fontSize: "0.7rem",
+                                                  fontWeight: 700,
+                                                  "& .MuiChip-icon": {
+                                                    fontSize: 14,
+                                                  },
+                                                }}
+                                              />
+                                            ) : isUnitFinal ? (
                                               <Chip
                                                 icon={
                                                   <EmojiEvents
