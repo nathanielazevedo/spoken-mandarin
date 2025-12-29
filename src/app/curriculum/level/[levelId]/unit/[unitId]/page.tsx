@@ -19,8 +19,6 @@ import {
   CheckCircle,
   Lock,
   ArrowBack,
-  EmojiEvents,
-  WorkspacePremium,
 } from "@mui/icons-material";
 import { TopNav } from "@/components/TopNav";
 import { useProgress } from "@/hooks/useProgress";
@@ -32,8 +30,6 @@ interface Lesson {
   order: number;
   name: string;
   description: string | null;
-  isUnitFinal: boolean;
-  isLevelFinal: boolean;
   _count: {
     vocabulary: number;
     sentences: number;
@@ -155,14 +151,8 @@ export default function UnitPage({
       <Box
         sx={{
           minHeight: "100vh",
-          bgcolor: "background.default",
-          backgroundImage: (theme) =>
-            theme.palette.mode === "dark"
-              ? "url('/hanziBackgroundDark.svg')"
-              : "url('/haziBackground.svg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundAttachment: "fixed",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "grey.900" : "grey.100",
         }}
       >
         <TopNav />
@@ -182,14 +172,8 @@ export default function UnitPage({
       <Box
         sx={{
           minHeight: "100vh",
-          bgcolor: "background.default",
-          backgroundImage: (theme) =>
-            theme.palette.mode === "dark"
-              ? "url('/hanziBackgroundDark.svg')"
-              : "url('/haziBackground.svg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundAttachment: "fixed",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "grey.900" : "grey.100",
         }}
       >
         <TopNav />
@@ -204,14 +188,8 @@ export default function UnitPage({
     <Box
       sx={{
         minHeight: "100vh",
-        bgcolor: "background.default",
-        backgroundImage: (theme) =>
-          theme.palette.mode === "dark"
-            ? "url('/hanziBackgroundDark.svg')"
-            : "url('/haziBackground.svg')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
+        bgcolor: (theme) =>
+          theme.palette.mode === "dark" ? "grey.900" : "grey.100",
       }}
     >
       <TopNav
@@ -246,33 +224,13 @@ export default function UnitPage({
                 elevation={0}
                 sx={{
                   border: "2px solid",
-                  borderColor: lesson.isLevelFinal
-                    ? "warning.main"
-                    : lesson.isUnitFinal
-                    ? "primary.main"
-                    : lessonCompleted
-                    ? "success.main"
-                    : "divider",
-                  bgcolor: lesson.isLevelFinal
-                    ? (theme) =>
-                        theme.palette.mode === "dark"
-                          ? "rgba(237, 108, 2, 0.1)"
-                          : "rgba(237, 108, 2, 0.05)"
-                    : lesson.isUnitFinal
-                    ? (theme) =>
-                        theme.palette.mode === "dark"
-                          ? "rgba(220, 38, 38, 0.1)"
-                          : "rgba(220, 38, 38, 0.05)"
-                    : "background.paper",
+                  borderColor: lessonCompleted ? "success.main" : "divider",
+                  bgcolor: "background.paper",
                   opacity: lessonUnlocked ? 1 : 0.6,
                   transition: "all 0.2s ease",
                   "&:hover": lessonUnlocked
                     ? {
-                        borderColor: lesson.isLevelFinal
-                          ? "warning.dark"
-                          : lesson.isUnitFinal
-                          ? "primary.dark"
-                          : "primary.main",
+                        borderColor: "primary.main",
                         boxShadow: 3,
                       }
                     : {},
@@ -313,16 +271,6 @@ export default function UnitPage({
                             <Typography variant="h6" sx={{ fontWeight: 600 }}>
                               {lesson.name}
                             </Typography>
-                            {lesson.isLevelFinal && (
-                              <EmojiEvents
-                                sx={{ fontSize: 24, color: "warning.main" }}
-                              />
-                            )}
-                            {lesson.isUnitFinal && !lesson.isLevelFinal && (
-                              <WorkspacePremium
-                                sx={{ fontSize: 24, color: "primary.main" }}
-                              />
-                            )}
                           </Box>
                           {lesson.description && (
                             <Typography
@@ -334,36 +282,16 @@ export default function UnitPage({
                             </Typography>
                           )}
                           <Stack direction="row" spacing={1} flexWrap="wrap">
-                            {lesson.isLevelFinal ? (
-                              <Chip
-                                icon={<EmojiEvents sx={{ fontSize: 16 }} />}
-                                label="Level Final Exam"
-                                size="small"
-                                color="warning"
-                                sx={{ fontWeight: 600 }}
-                              />
-                            ) : lesson.isUnitFinal ? (
-                              <Chip
-                                icon={
-                                  <WorkspacePremium sx={{ fontSize: 16 }} />
-                                }
-                                label="Unit Final Exam"
-                                size="small"
-                                color="primary"
-                                sx={{ fontWeight: 600 }}
-                              />
-                            ) : (
-                              <>
-                                <Chip
-                                  label={`${lesson._count.vocabulary} words`}
-                                  size="small"
-                                  sx={{ bgcolor: "action.hover" }}
-                                />
-                                <Chip
-                                  label={`${lesson._count.sentences} sentences`}
-                                  size="small"
-                                  sx={{ bgcolor: "action.hover" }}
-                                />
+                            <Chip
+                              label={`${lesson._count.vocabulary} words`}
+                              size="small"
+                              sx={{ bgcolor: "action.hover" }}
+                            />
+                            <Chip
+                              label={`${lesson._count.sentences} sentences`}
+                              size="small"
+                              sx={{ bgcolor: "action.hover" }}
+                            />
                               </>
                             )}
                             {lessonCompleted && (

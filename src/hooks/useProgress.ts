@@ -64,36 +64,6 @@ export function useProgress() {
     return unlockedStatus.unlockedLevels.includes(levelId);
   }, [unlockedStatus]);
 
-  const recordExamAttempt = useCallback(async (
-    lessonId: string,
-    score: number,
-    passed: boolean,
-    timeSpent?: number,
-    answers?: Record<string, string>
-  ) => {
-    try {
-      const response = await fetch(`/api/progress/${lessonId}/exam`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ score, passed, timeSpent, answers }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to record exam attempt');
-      }
-
-      // Refresh unlocked status after recording attempt
-      if (passed) {
-        await fetchUnlockedStatus();
-      }
-
-      return await response.json();
-    } catch (err) {
-      console.error('Error recording exam attempt:', err);
-      throw err;
-    }
-  }, [fetchUnlockedStatus]);
-
   return {
     unlockedStatus,
     loading,
@@ -102,7 +72,6 @@ export function useProgress() {
     isLessonCompleted,
     isUnitUnlocked,
     isLevelUnlocked,
-    recordExamAttempt,
     refreshProgress: fetchUnlockedStatus,
   };
 }

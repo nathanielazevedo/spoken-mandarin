@@ -24,8 +24,6 @@ interface Lesson {
   order: number;
   name: string;
   description: string | null;
-  isUnitFinal: boolean;
-  isLevelFinal: boolean;
   _count: {
     vocabulary: number;
     sentences: number;
@@ -139,14 +137,8 @@ export default function LevelPage({
       <Box
         sx={{
           minHeight: "100vh",
-          bgcolor: "background.default",
-          backgroundImage: (theme) =>
-            theme.palette.mode === "dark"
-              ? "url('/hanziBackgroundDark.svg')"
-              : "url('/haziBackground.svg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundAttachment: "fixed",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "grey.900" : "grey.100",
         }}
       >
         <TopNav />
@@ -166,14 +158,8 @@ export default function LevelPage({
       <Box
         sx={{
           minHeight: "100vh",
-          bgcolor: "background.default",
-          backgroundImage: (theme) =>
-            theme.palette.mode === "dark"
-              ? "url('/hanziBackgroundDark.svg')"
-              : "url('/haziBackground.svg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundAttachment: "fixed",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "grey.900" : "grey.100",
         }}
       >
         <TopNav />
@@ -188,14 +174,8 @@ export default function LevelPage({
     <Box
       sx={{
         minHeight: "100vh",
-        bgcolor: "background.default",
-        backgroundImage: (theme) =>
-          theme.palette.mode === "dark"
-            ? "url('/hanziBackgroundDark.svg')"
-            : "url('/haziBackground.svg')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
+        bgcolor: (theme) =>
+          theme.palette.mode === "dark" ? "grey.900" : "grey.100",
       }}
     >
       <TopNav

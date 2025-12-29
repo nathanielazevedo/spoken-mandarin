@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Box,
   Button,
@@ -52,11 +58,6 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   const baseVocabulary = useMemo(() => vocabulary.slice(), [vocabulary]);
   const totalVocabularyCount = baseVocabulary.length;
 
-  const [rangeStart, setRangeStart] = useState(
-    totalVocabularyCount > 0 ? 1 : 0
-  );
-  const [rangeEnd, setRangeEnd] = useState(totalVocabularyCount || 0);
-
   const [activeVocabulary, setActiveVocabulary] = useState<PracticeEntry[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sessionTotal, setSessionTotal] = useState(0);
@@ -77,6 +78,9 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   const [retryMode, setRetryMode] = useState(false);
   const [retrySuccessCount, setRetrySuccessCount] = useState(0);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const RETRY_TARGET = 5;
 
   const currentWord = activeVocabulary[currentIndex] ?? null;
@@ -89,14 +93,6 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
   const progressPercentLabel = sessionTotal
     ? `${progress.toFixed(1)}%`
     : "0.0%";
-  const selectedCount = useMemo(() => {
-    if (!totalVocabularyCount || rangeStart === 0 || rangeEnd === 0) {
-      return 0;
-    }
-    const start = Math.min(rangeStart, rangeEnd);
-    const end = Math.max(rangeStart, rangeEnd);
-    return Math.max(0, end - start + 1);
-  }, [rangeEnd, rangeStart, totalVocabularyCount]);
   const practicedCount = sessionTotal;
 
   const formattedOverallTime = useMemo(() => {
@@ -120,11 +116,8 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
       return;
     }
 
-    const startIdx = clampIndexValue(rangeStart, totalVocabularyCount) - 1;
-    const endIdx = clampIndexValue(rangeEnd, totalVocabularyCount) - 1;
-    const selectionStart = Math.min(startIdx, endIdx);
-    const selectionEnd = Math.max(startIdx, endIdx);
-    const selected = baseVocabulary.slice(selectionStart, selectionEnd + 1);
+    // Use all vocabulary items
+    const selected = baseVocabulary.slice();
 
     if (!selected.length) {
       setActiveVocabulary([]);
@@ -136,8 +129,8 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     setActiveVocabulary(selected);
     setSessionTotal(selected.length);
     setSessionRange({
-      start: selectionStart + 1,
-      end: selectionStart + selected.length,
+      start: 1,
+      end: selected.length,
     });
     setCurrentIndex(0);
     setHasSessionStarted(true);
@@ -147,13 +140,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     setIsPaused(false);
     setMissedWords([]);
     setReviewRound(0);
-  }, [
-    baseVocabulary,
-    rangeEnd,
-    rangeStart,
-    resetForCurrentWord,
-    totalVocabularyCount,
-  ]);
+  }, [baseVocabulary, resetForCurrentWord, totalVocabularyCount]);
 
   const startMissedWordsReview = useCallback(() => {
     if (missedWords.length === 0) return;
@@ -306,56 +293,19 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     moveToNext();
   }, [moveToNext, retryMode]);
 
-  const handleRangeStartInputChange = useCallback(
-    (value: number) => {
-      if (!totalVocabularyCount) {
-        setRangeStart(0);
-        setRangeEnd(0);
-        return;
-      }
-      const clamped = clampIndexValue(value, totalVocabularyCount);
-      setRangeStart(clamped);
-      if (clamped > rangeEnd) {
-        setRangeEnd(clamped);
-      }
-    },
-    [rangeEnd, totalVocabularyCount]
-  );
-
-  const handleRangeEndInputChange = useCallback(
-    (value: number) => {
-      if (!totalVocabularyCount) {
-        setRangeStart(0);
-        setRangeEnd(0);
-        return;
-      }
-      const clamped = clampIndexValue(value, totalVocabularyCount);
-      setRangeEnd(clamped);
-      if (clamped < rangeStart) {
-        setRangeStart(clamped);
-      }
-    },
-    [rangeStart, totalVocabularyCount]
-  );
-
-  const handleRangeSliderChange = useCallback(
-    (_: unknown, value: number | number[]) => {
-      if (!Array.isArray(value)) {
-        return;
-      }
-      const [startValue, endValue] = value;
-      setRangeStart(startValue);
-      setRangeEnd(endValue);
-    },
-    []
-  );
-
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleSubmit();
     }
   };
+
+  // Auto-start practice when component mounts
+  useEffect(() => {
+    if (totalVocabularyCount > 0 && !hasSessionStarted) {
+      startPractice();
+    }
+  }, [totalVocabularyCount, hasSessionStarted, startPractice]);
 
   useEffect(() => {
     if (
@@ -405,9 +355,34 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
     };
   }, [completed, hasSessionStarted, isOverallRunning]);
 
-  const sliderValue: [number, number] = totalVocabularyCount
-    ? [rangeStart || 1, rangeEnd || totalVocabularyCount]
-    : [0, 0];
+  // Prevent viewport from resizing when keyboard appears on mobile
+  useEffect(() => {
+    // Lock scroll position at top
+    const lockScroll = () => {
+      if (window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    // Apply styles to prevent scrolling
+    const originalOverflow = document.documentElement.style.overflow;
+    const originalBodyOverflow = document.body.style.overflow;
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    // Lock on mount
+    window.scrollTo(0, 0);
+
+    // Listen to scroll events
+    window.addEventListener("scroll", lockScroll, { passive: true });
+
+    return () => {
+      document.documentElement.style.overflow = originalOverflow;
+      document.body.style.overflow = originalBodyOverflow;
+      window.removeEventListener("scroll", lockScroll);
+    };
+  }, []);
 
   const disableControls = !hasSessionStarted;
   const timerChipColor =
@@ -415,14 +390,20 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
 
   return (
     <Box
+      ref={containerRef}
       sx={{
         position: "fixed",
-        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         bgcolor: "background.default",
         display: "flex",
         flexDirection: "column",
         zIndex: 1300,
         overflow: "hidden",
+        height: "100vh",
+        width: "100vw",
       }}
     >
       <Box
@@ -431,6 +412,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
           flexDirection: "column",
           height: "100%",
           width: "100%",
+          overflow: "hidden",
         }}
       >
         <Stack
@@ -553,69 +535,6 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
             WebkitOverflowScrolling: "touch",
           }}
         >
-          {!hasSessionStarted && (
-            <Stack
-              spacing={2}
-              sx={{ width: "100%", maxWidth: 460, mx: "auto" }}
-            >
-              {totalVocabularyCount > 0 ? (
-                <>
-                  <Typography variant="body2" color="text.secondary">
-                    Select the range of {itemLabel} to drill.
-                  </Typography>
-                  <Slider
-                    value={sliderValue}
-                    onChange={handleRangeSliderChange}
-                    valueLabelDisplay="auto"
-                    min={1}
-                    max={totalVocabularyCount}
-                    step={1}
-                    disabled={totalVocabularyCount <= 1}
-                  />
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                    <TextField
-                      type="number"
-                      label="Start index"
-                      value={rangeStart || ""}
-                      onChange={(event) =>
-                        handleRangeStartInputChange(Number(event.target.value))
-                      }
-                      inputProps={{ min: 1, max: totalVocabularyCount }}
-                      fullWidth
-                    />
-                    <TextField
-                      type="number"
-                      label="End index"
-                      value={rangeEnd || ""}
-                      onChange={(event) =>
-                        handleRangeEndInputChange(Number(event.target.value))
-                      }
-                      inputProps={{ min: 1, max: totalVocabularyCount }}
-                      fullWidth
-                    />
-                  </Stack>
-                </>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Add {itemLabel} to begin practicing.
-                </Typography>
-              )}
-              <Button
-                variant="contained"
-                size="large"
-                onClick={startPractice}
-                disabled={!selectedCount}
-                sx={{
-                  py: { xs: 1.5, sm: 1 },
-                  fontSize: { xs: "1rem", sm: "0.875rem" },
-                  minHeight: { xs: 48, sm: 42 },
-                }}
-              >
-                Start practice
-              </Button>
-            </Stack>
-          )}
-
           {hasSessionStarted && completed && (
             <Stack spacing={2} textAlign="center">
               {missedWords.length === 0 ? (
@@ -675,7 +594,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
 
           {hasSessionStarted && !completed && currentWord && (
             <Stack
-              spacing={3}
+              spacing={1.5}
               sx={{ width: "100%", maxWidth: 600, mx: "auto" }}
             >
               {isPaused && (
@@ -686,10 +605,10 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                 />
               )}
               <Typography
-                variant="h4"
+                variant="h5"
                 textAlign="center"
                 sx={{
-                  fontSize: { xs: "2rem", sm: "2.125rem" },
+                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
                   fontWeight: 600,
                   mt: { xs: 2, sm: 0 },
                 }}
@@ -706,11 +625,11 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
               >
                 {revealed && (
                   <Typography
-                    variant="h3"
+                    variant="h5"
                     textAlign="center"
                     color="primary"
                     sx={{
-                      fontSize: { xs: "2.5rem", sm: "3rem" },
+                      fontSize: { xs: "1.25rem", sm: "1.5rem" },
                       fontWeight: 700,
                     }}
                   >
@@ -720,7 +639,7 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
               </Box>
               <TextField
                 fullWidth
-                autoFocus
+                inputRef={inputRef}
                 label={retryMode ? "Type it again" : "Type the pinyin"}
                 value={userInput}
                 onChange={(event) => setUserInput(event.target.value)}
@@ -733,14 +652,14 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                 inputMode="text"
                 sx={{
                   "& .MuiInputBase-root": {
-                    fontSize: { xs: "1.25rem", sm: "1.125rem" },
+                    fontSize: { xs: "1rem", sm: "1rem" },
                   },
                   "& .MuiInputBase-input": {
                     textAlign: "center",
-                    py: { xs: 2, sm: 1.5 },
+                    py: { xs: 1.5, sm: 1.25 },
                   },
                   "& .MuiInputLabel-root": {
-                    fontSize: { xs: "1.125rem", sm: "1rem" },
+                    fontSize: { xs: "0.875rem", sm: "0.875rem" },
                   },
                 }}
               />
@@ -752,9 +671,9 @@ export const VocabularyPractice: React.FC<VocabularyPracticeProps> = ({
                   fullWidth
                   size="large"
                   sx={{
-                    py: 2,
-                    fontSize: { xs: "1.125rem", sm: "1rem" },
-                    minHeight: 56,
+                    py: 1.5,
+                    fontSize: { xs: "1rem", sm: "0.875rem" },
+                    minHeight: 48,
                     fontWeight: 600,
                   }}
                 >

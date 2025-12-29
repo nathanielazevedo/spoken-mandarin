@@ -20,7 +20,6 @@ import { AddVocabularyDialog } from "./lesson/dialogs/AddVocabularyDialog";
 import { AddSentenceDialog } from "./lesson/dialogs/AddSentenceDialog";
 import { BulkUploadDialog } from "./lesson/dialogs/BulkUploadDialog";
 import { MoveToLessonDialog } from "./lesson/dialogs/MoveToLessonDialog";
-import { ExamSection } from "./lesson/ExamSection";
 import { normalizePinyinWord } from "../utils/pinyin";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadLessonFromCache, saveLessonToCache } from "../utils/offlineCache";
@@ -56,6 +55,7 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
   const [showSentenceFlashcards, setShowSentenceFlashcards] = useState(false);
   const [showVocabularyPractice, setShowVocabularyPractice] = useState(false);
   const [showSentencePractice, setShowSentencePractice] = useState(false);
+  const [showAdminView, setShowAdminView] = useState(false); // Toggle for admin view
 
   const [vocabularySearchTerm, setVocabularySearchTerm] = useState("");
 
@@ -564,45 +564,46 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
     );
   }
 
+  // For non-admin users OR admins in practice view, automatically show sentence practice
+  if ((!isAdmin || !showAdminView) && lesson) {
+    return (
+      <VocabularyPractice
+        vocabulary={sentences}
+        itemLabel="sentences"
+        onClose={handleBackClick}
+        onEntryCompleted={handlePracticeEntryCompleted}
+      />
+    );
+  }
+
+  // Admin view (only shown when admin toggles to it)
   return (
     <>
-      <TopNav
-        breadcrumb={{
-          program: lesson.program?.name,
-          level: lesson.level
-            ? {
-                id: lesson.level.id,
-                order: lesson.level.order,
-                name: lesson.level.name,
-              }
-            : undefined,
-          unit: lesson.unit
-            ? {
-                id: lesson.unit.id,
-                order: lesson.unit.order,
-                name: lesson.unit.name,
-              }
-            : undefined,
-          lesson: lesson.name,
-        }}
-      />
+      <TopNav onBack={handleBackClick} />
       <Box
         sx={{
           minHeight: "100vh",
           width: "100%",
           py: { xs: 2, sm: 4 },
           px: { xs: 2, sm: 3, md: 4 },
-          backgroundColor: (theme) => theme.palette.background.default,
-          backgroundImage: (theme) =>
-            theme.palette.mode === "dark"
-              ? "url('/hanziBackgroundDark.svg')"
-              : "url('/haziBackground.svg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundAttachment: "fixed",
+          backgroundColor: (theme) => theme.palette.background.paper,
         }}
       >
         <Box sx={{ maxWidth: 1100, mx: "auto", width: "100%" }}>
+          {isAdmin && (
+            <Box sx={{ mb: 3, display: "flex", justifyContent: "flex-end" }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setShowAdminView(!showAdminView)}
+              >
+                {showAdminView
+                  ? "Switch to Practice View"
+                  : "Switch to Admin View"}
+              </Button>
+            </Box>
+          )}
+
           {actionError && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {actionError}
@@ -739,9 +740,6 @@ export const LessonPage: React.FC<LessonPageProps> = ({ lessonId, onBack }) => {
               canEditLesson ? handleOpenMoveSentenceDialog : undefined
             }
           />
-
-          {/* Exam Section */}
-          {resolvedLessonId && <ExamSection lessonId={resolvedLessonId} />}
 
           {canEditLesson && (
             <AddVocabularyDialog

@@ -10,7 +10,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => (
     sx={{
       flexGrow: 1,
       minHeight: "100vh",
-      bgcolor: "background.default",
+      bgcolor: (theme) =>
+        theme.palette.mode === "dark" ? "grey.900" : "grey.100",
       width: "100%",
       overflow: "hidden",
     }}

@@ -19,7 +19,6 @@ export async function GET() {
                     order: true,
                     name: true,
                     description: true,
-                    isUnitFinal: true,
                     _count: {
                       select: {
                         vocabulary: true,

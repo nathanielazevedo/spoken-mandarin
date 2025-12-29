@@ -12,11 +12,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all user's completed lessons (where exam is passed)
+    // Get all user's completed lessons (where completedAt is set)
     const completedProgress = await prisma.userProgress.findMany({
       where: {
         userId: user.id,
-        examPassed: true,
+        completedAt: {
+          not: null,
+        },
       },
       select: {
         lessonId: true,
@@ -58,9 +60,6 @@ export async function GET() {
                   select: {
                     id: true,
                     order: true,
-                    exam: {
-                      select: { id: true },
-                    },
                   },
                 },
               },
@@ -105,7 +104,7 @@ export async function GET() {
             // 2. It's the first unit in the level, OR all lessons in previous unit are completed
             const unitUnlocked = !previousUnit ||
               previousUnit.lessons.every(lesson => 
-                !lesson.exam || completedLessons.has(lesson.id)
+                completedLessons.has(lesson.id)
               );
 
             if (unitUnlocked) {
@@ -119,7 +118,7 @@ export async function GET() {
                 // 1. Unit is unlocked AND
                 // 2. It's the first lesson, OR previous lesson is completed
                 const lessonUnlocked = !previousLesson ||
-                  !previousLesson.exam || completedLessons.has(previousLesson.id);
+                  completedLessons.has(previousLesson.id);
 
                 if (lessonUnlocked) {
                   unlockedLessons.add(lesson.id);

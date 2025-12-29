@@ -54,6 +54,7 @@ const toRoman = (num: number): string => {
 export interface TopNavProps {
   onCreateLesson?: () => void;
   isCreatingLesson?: boolean;
+  onBack?: () => void;
   breadcrumb?: {
     program?: string;
     level?: { id: string; order: number; name: string };
@@ -65,6 +66,7 @@ export interface TopNavProps {
 export const TopNav: React.FC<TopNavProps> = ({
   onCreateLesson,
   isCreatingLesson = false,
+  onBack,
   breadcrumb,
 }) => {
   const router = useRouter();
@@ -123,7 +125,32 @@ export const TopNav: React.FC<TopNavProps> = ({
   return (
     <AppBar position="static" elevation={0}>
       <Toolbar sx={{ justifyContent: "space-between" }}>
-        {breadcrumb ? (
+        {onBack ? (
+          <>
+            {/* Back button for lesson pages */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <IconButton
+                onClick={onBack}
+                size="small"
+                sx={{
+                  color: "text.primary",
+                  "&:hover": { color: "primary.main" },
+                }}
+              >
+                <ArrowBackIcon />
+              </IconButton>
+              <Typography
+                sx={{
+                  fontWeight: 600,
+                  color: "text.primary",
+                  fontSize: "0.95rem",
+                }}
+              >
+                Back to Curriculum
+              </Typography>
+            </Box>
+          </>
+        ) : breadcrumb ? (
           <>
             {/* Mobile: Show back button */}
             <Box
